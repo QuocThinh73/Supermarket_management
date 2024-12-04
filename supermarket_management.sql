@@ -171,16 +171,6 @@ CREATE TABLE PositionHistory (
     PRIMARY KEY(EmployeeID, PositionID, StartDate)
 );
 
-CREATE TABLE Payroll (
-	PayrollID		INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    PayPeriodStart	DATETIME,
-    PayPeriodEnd	DATETIME,
-    PaymentDate		DATETIME,
-    PaymentMethod	ENUM('Tiền mặt', 'Chuyển khoản'),
-    EmployeeID		INT UNSIGNED,
-    FOREIGN KEY(EmployeeID) REFERENCES Employee(EmployeeID)
-);
-
 CREATE TABLE Bonus (
 	BonusID			INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     Amount			INT UNSIGNED,
