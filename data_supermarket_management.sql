@@ -1,20 +1,71 @@
 USE Supermarket_Management;
 
-INSERT INTO Category	(CategoryID	, CategoryName	, `Description`					)
-VALUES					(1			, 'Thực phẩm'	, 'Các mặt hàng ăn uống'		),
-						(2			, 'Điện tử'		, 'Thiết bị điện tử'			),
-                        (3			, 'Gia dụng'	, 'Đồ dùng trong gia đình'		),
-                        (4			, 'Hóa mỹ phẩm'	, 'Sản phẩm chăm sóc sắc đẹp'	),
-                        (5			, 'Quần áo'		, 'Thời trang và phụ kiện'		);
+INSERT INTO Category	(CategoryID	, CategoryName					, `Description`					)
+VALUES					(1			, 'Thịt, cá, trứng, hải sản'	, ''							),
+						(2			, 'Rau, củ, nấm, trái cây'		, ''							),
+                        (3			, 'Dầu ăn, nước chấm, gia vị'	, ''							),
+                        (4			, 'Mì, miến, cháo, phở'			, ''							),
+                        (5			, 'Kem, thực phẩm đông mát'		, ''							),
+                        (6			, 'Gạo, bột, đồ khô'			, ''							),
+                        (7			, 'Bia, nước giải khát'			, ''							),
+                        (8			, 'Sữa các loại'				, ''							),
+                        (9			, 'Bánh kẹo các loại'			, ''							),
+                        (10			, 'Chăm sóc cá nhân'			, ''							),
+                        (11			, 'Sản phẩm cho mẹ và bé'		, ''							),
+                        (12			, 'Vệ sinh nhà cửa'				, ''							),
+                        (13			, 'Đồ dùng gia đình'			, ''							);
                         
-INSERT INTO Supplier	(SupplierID	, SupplierName								, Phone				, Email								, Website						, Street				, District	, City						, Province	, Country		)
-VALUES					(1			, 'Công ty Cổ phẩn Lương thực Phương Nam'	, '+84909349988' 	, 'nongsansachphuongnam@gmail.com' 	, 'https://gaophuongnam.vn/' 	, '644/4/3 3 tháng 2' 	, 'Quận 10' , 'Thành phố Hồ Chí Minh' 	, '' 		, 'Việt Nam'	),
-						(2			, 'Công ty Cổ phần Sữa Việt Nam'			, '+84234567890' 	, 'foodmart@gmail.com' 				, 'www.foodmart.com' 			, '789 Nguyễn Trãi' 	, 'Quận 7' 	, 'Thành phố Hồ Chí Minh' 	, '' 		, 'Việt Nam'	),
-						(3			, 'Công ty FoodMart'						, '+84234567890' 	, 'foodmart@gmail.com' 				, 'www.foodmart.com' 			, '789 Nguyễn Trãi' 	, 'Quận 7' 	, 'Thành phố Hồ Chí Minh' 	, '' 		, 'Việt Nam'	),
-                        (4			, 'Công ty FoodMart'						, '+84234567890' 	, 'foodmart@gmail.com' 				, 'www.foodmart.com' 			, '789 Nguyễn Trãi' 	, 'Quận 7' 	, 'Thành phố Hồ Chí Minh' 	, '' 		, 'Việt Nam'	),
-                        (5			, 'Công ty FoodMart'						, '+84234567890' 	, 'foodmart@gmail.com' 				, 'www.foodmart.com' 			, '789 Nguyễn Trãi' 	, 'Quận 7' 	, 'Thành phố Hồ Chí Minh' 	, '' 		, 'Việt Nam'	);
+INSERT INTO Supplier	(SupplierID	, SupplierName									, Phone				, Email								, Website					, Address																											)
+VALUES					(1			, 'Công ty Cổ phẩn Lương thực Phương Nam'		, '+84909349988' 	, 'nongsansachphuongnam@gmail.com' 	, 'gaophuongnam.vn' 		, '644/4/3 3 tháng 2, Phường 14, Quận 10, Thành phố Hồ Chí Minh'													),
+						(2			, 'Công ty Cổ phần Sữa Việt Nam'				, '+842854155555' 	, 'vinamilk@vinamilk.com' 			, 'www.vinamilk.com.vn' 	, 'Số 10 Tân Trào, Phường Tân Phú, Quận 7, Thành phố Hồ Chí Minh'													),
+						(3			, 'Công ty Cổ phần Chăn nuôi C.P. Việt Nam'		, '+842513836251' 	, 'web-info@cp.com.vn' 				, 'www.cp.com.vn' 			, 'Số 2 đường 2A, KCN Biên Hoà II, Phường Long Bình Tân, Thành phố Biên Hòa, Tỉnh Đồng Nai'							),
+                        (4			, 'Công ty TNHH Tú Phượng Tony'					, '+89075333354' 	, ''				 				, 'tonyfruit.vn' 			, '19A Mai Chí Thọ, Phường An Khánh, Thành phố Thủ Đức, Thành phố Hồ Chí Minh'										),
+                        (5			, 'Công ty Cổ phần Hàng tiêu dùng Masan'		, '+84902662660' 	, 'info@msc.masangroup.com' 		, 'masanconsumer.com' 		, '23 Lê Duẩn, Phường Bến Nghé, Quận 1, Thành phố Hồ Chí Minh'														),
+						(6			, 'Công ty Cổ phần Acecook Việt Nam'			, '+84381540643'	, 'info@acecookvietnam.com'			, 'acecookvietnam.vn'		, 'Lô số II-3, Đường số 11, Nhóm CN II, KCN Tân Bình, Phường Tây Thạnh, Quận Tân Phú, Thành phố Hồ Chí Minh'		),
+                        (7			, 'Công ty TNHH Thực phẩm Orion'				, '+842835123420'	, ''								, 'orion.vn'				, 'Tầng 22, tòa nhà Pearl Plaza, 561A, Điện Biên Phủ, Phường 25, Quận Bình Thạnh, Thành phố Hồ Chí Minh'			),
+                        (8			, 'Công ty TNHH Nestlé Việt Nam'				, '+842839113737'	, 'consumer.services@vn.nestle.com'	, 'www.nestle.com.vn/vi'	, 'Lầu 5, Empress Tower, 138-142 Hai Bà Trưng, Phường Đa Kao, Quận 1, Thành phố Hồ Chí Minh'						),
+                        (9			, 'Tập đoàn Trung Nguyên Legend'				, '+842839251845'	, 'cs@trungnguyenlegend.com'		, 'trungnguyenlegend.com'	, '82-84 Bùi Thị Xuân, Phường Bến Thành, Quận 1, Thành phố Hồ Chí Minh'												),
+                        (10			, 'Công ty TNHH Nhà Máy Bia HEINEKEN Việt Nam'	, '+84290018452'	, 'contactvn@heineken.com' 			, 'heineken-vietnam.com.vn'	, 'Tầng 18 và 19, tòa nhà Vietcombank, số 5 Công trường Mê Linh, Phường Bến Nghé, Quận 1, Thành phố Hồ Chí Minh'	),
+                        (11			, 'Công ty Cổ phần Sữa Quốc tế'					, '+842258021831'	, ''								, 'idp.vn/vi/cong-ty-idp'	, '217 Nguyễn Văn Thủ, Phường Đakao, Quận 1, Thành phố Hồ Chí Minh'													),
+                        (12			, 'Công ty Cổ phần Thực phẩm đông lạnh KIDO'	, '+8438270468'		, 'customerservice_kido@kdc.vn'		, 'www.kidofoods.vn'		, '138-142, Hai Bà Trưng, Phường Đakao, Quận 1, Thành phố Hồ Chí Minh'												),
+                        (13			, 'Công ty Cổ phần Kỹ nghệ thực phẩm Việt Nam'	, '+8418001097'		, ''								, 'vifon.com.vn'			, '913 Trường Chinh, Phường Tây Thạnh, Quận Tân Phú, Thành phố Hồ Chí Minh'											),
+                        (14			, 'Công ty Unilever'							, '+842854135686'	, ''								, 'www.unilever.com.vn'		, '156 Nguyễn Lươn Bằng, Phường Tân Phú, Quận 7, Thành phố Hồ Chí Minh'												),
+                        (15			, 'Công ty Cổ phần P/S'							, '+842837281589'	, 'congtyps@gmail.com'				, 'congtyps.com'			, '513C đường Nam Hòa, Phường Phước Long A, Thành phố Thủ Đức, Thành phố Hồ Chí Minh'								),
+                        (16			, 'Công ty TNHH P&G'							, '+8435214555'		, ''								, 'vn.pg.com'				, '11/F, MPlaza, 39 Lê Duẩn , Quận 1, Thành phố Hồ Chí Minh'														),
+                        (17			, 'Công ty TNHH Meizan CLV'						, '+842838386611'	, 'info-mcc@vn.wilmar-intl.com'		, 'www.meizanclv.com.vn'	, 'Lô C20a-1, Đường số 14, KCN Hiệp Phước, Xã Hiệp Phước, Huyện Nhà Bè, Thành phố Hồ Chí Minh'						),
+                        (18			, 'Tổng Công ty Thương mại Sài Gòn'				, '+842838629629'	, 'info@sieuthisaigon.com.vn'		, 'sieuthisaigon.com.vn'	, 'Số 460 Đường 3 tháng 2, Phường 12, Quận 10, Thành phố Hồ Chí Minh'												),
+                        (19			, 'Công ty Cổ phần Thực phẩm Á Châu'			, '+842844500588'	, 'info@asiafoods.vn'				, 'www.asiafoods.vn'		, 'Số 9/2, Đường ĐT 743, Khu phố 1B, Phường An Phú, Thành phố Thuận An, Tỉnh Bình Dương'							),
+                        (20			, 'Công ty cổ phần Micoem'						, '+842223714146'	, 'afotech@afotech.vn'				, 'afotech.vn'				, 'Số 8, Đường TS15, KCN Tiên Sơn, Xã Hoàn Sơn, Huyện Tiên Du, Tỉnh Bắc Ninh'										);
                         
-CREATE TABLE Product	(ProductID	, ProductName	, CategoryID	, SupplierID	, Price		, CostPrice	, ExpirationDate	)
-VALUES					(1			, 'Gạo ST25'	, 1				, 1				, 50000		, 40000		, '2025-12-31'		),
-						(2			, 'Bánh mì'		, 1				, 1				, 20000		, 15000		, '2024-12-31'		),
-						(3			, '
+INSERT INTO Product		(ProductID	, ProductName													, CategoryID	, SupplierID	, Price		, CostPrice	, Unit 		, ExpirationDate	)
+VALUES					(1			, 'Thùng 30 gói mì Hảo Hảo tôm chua cay 75g'					, 4				, 6				, 95000		, 118000	, 'Thùng'	, '2024-12-31'		),
+						(2			, 'Mì Hảo Hảo vị tôm chua cay gói 75g'							, 4				, 6				, 3800		, 4400		, 'Gói'		, '2024-12-31'		),
+                        (3			, 'Thùng 30 gói mì Hảo Hảo hương vị lẩu kim chi Hàn Quốc 75g'	, 4				, 6				, 98000		, 125000	, 'Thùng'	, '2024-12-31'		),
+                        (4			, 'Mì Hảo Hảo hương vị lẩu kim chi Hàn Quốc gói 75g'			, 4				, 6				, 3900		, 4400		, 'Gói'		, '2024-12-31'		),
+                        (5			, 'Thùng 30 gói mì Gấu Đỏ tôm và gà 63g'						, 4				, 19			, 63000		, 79000		, 'Thùng'	, '2025-02-27'		),
+                        (6			, 'Mì Gấu đỏ tôm và gà gói 63g'									, 4				, 19			, 3000		, 3500		, 'Gói'		, '2025-02-27'		),
+                        (7			, 'Thùng 30 gói mì Gấu Đỏ bò bít tết 63g'						, 4				, 19			, 63000		, 79000		, 'Thùng'	, '2025-02-27'		),
+                        (8			, 'Mì Gấu Đỏ bò bít tết gói 63g'								, 4				, 19			, 3000		, 3500		, 'Gói'		, '2025-02-27'		),
+                        (9			, 'Thùng 30 gói hủ tiếu sườn heo Cung Đình 84g'					, 4				, 20			, 25000		, 288000	, 'Thùng'	, '2025-03-07'		),
+                        (10			, 'Hủ tiếu sườn heo Cung Đình gói 84g'							, 4 			, 20			, 8200		, 9600		, 'Gói'		, '2025-03-07'		),
+                        (11			, 'Trứng gà sạch hộp 10 quả'									, 1				, 3				, 24000		, 28000		, 'Hộp'		, '2024-11-15'		),
+						(12			, 'Thịt ba rọi heo (500g)'										, 1				, 3				, 75000		, 70000		, 'Kg'		, '2024-12-10'		),
+						(13			, 'Cá thu tươi (1kg)'											, 1				, 3				, 120000	, 110000	, 'Kg'		, '2024-11-20'		),
+						(14			, 'Rau cải ngọt (1kg)'											, 2				, 4				, 20000		, 15000		, 'Kg'		, '2024-10-30'		),
+						(15			, 'Nấm bào ngư (200g)'											, 2				, 4				, 18000		, 15000		, 'Gói'		, '2024-11-05'		),
+						(16			, 'Táo đỏ nhập khẩu (1kg)'										, 2				, 4				, 85000		, 80000		, 'Kg'		, '2024-11-30'		),
+						(17			, 'Dầu ăn Neptune 1L'											, 3				, 5				, 38000		, 35000		, 'Chai'	, '2025-01-10'		),
+						(18			, 'Nước mắm Nam Ngư 900ml'										, 3				, 5				, 41000		, 38000		, 'Chai'	, '2025-02-25'		),
+						(19			, 'Muối tinh hảo hạng (500g)'									, 3				, 5				, 10000		, 8000		, 'Gói'		, '2025-06-01'		),
+						(20			, 'Mì gói 3 Miền lẩu thái chua cay (75g)'						, 4				, 13			, 4000		, 3500		, 'Gói'		, '2025-03-01'		),
+						(21			, 'Kem Wall hộp 450ml'											, 5				, 12			, 55000		, 50000		, 'Hộp'		, '2024-12-15'		),
+						(22			, 'Gạo thơm ST25 (5kg)'											, 6				, 1				, 150000	, 140000	, 'Bao'		, '2025-12-01'		),
+						(23			, 'Nước ngọt Coca-Cola lon 330ml'								, 7				, 10			, 9000		, 8000		, 'Lon'		, '2025-04-01'		),
+						(24			, 'Bia Heineken lon 330ml'										, 7				, 10			, 17000		, 15000		, 'Lon'		, '2025-05-10'		),
+						(25			, 'Sữa tươi Vinamilk không đường 1L'							, 8				, 2				, 33000		, 30000		, 'Hộp'		, '2025-02-10'		),
+						(26			, 'Bánh quy Oreo 133g'											, 9				, 7				, 27000		, 25000		, 'Gói'		, '2025-06-15'		),
+						(27			, 'Kem đánh răng P/S bảo vệ 123 180g'							, 10			, 15			, 25000		, 23000		, 'Tuýp'	, '2025-11-01'		),
+						(28			, 'Tã bỉm Huggies size M (30 miếng)'							, 11			, 16			, 200000	, 180000	, 'Gói'		, '2025-08-01'		),
+						(29			, 'Nước lau sàn Sunlight hương hoa thiên nhiên 1L'				, 12			, 14			, 40000		, 35000		, 'Chai'	, '2025-07-20'		),
+						(30			, 'Bộ chén sứ trắng 6 cái'										, 13			, 18			, 120000	, 100000	, 'Bộ'		, NULL				);
+ 

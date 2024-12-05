@@ -10,24 +10,21 @@ CREATE TABLE Category (
 
 CREATE TABLE Supplier (
 	SupplierID		INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    SupplierName	NVARCHAR(30),
+    SupplierName	NVARCHAR(70),
     Phone			VARCHAR(15),
-    Email			VARCHAR(30),
+    Email			VARCHAR(40),
     Website			VARCHAR(30),
-    Street			VARCHAR(20),
-    District		VARCHAR(20),
-    City			VARCHAR(20),
-    Province		VARCHAR(20),
-    Country			VARCHAR(20)
+    Address			VARCHAR(120)
 );
 
 CREATE TABLE Product (
 	ProductID		INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    ProductName		NVARCHAR(30),
+    ProductName		NVARCHAR(70),
     CategoryID		INT UNSIGNED,
     SupplierID		INT UNSIGNED,
     Price			INT UNSIGNED,
     CostPrice		INT UNSIGNED,
+    Unit			NVARCHAR(10),
     ExpirationDate	DATETIME,
     FOREIGN KEY(CategoryID) REFERENCES Category(CategoryID),
     FOREIGN KEY(SupplierID) REFERENCES Supplier(SupplierID)
