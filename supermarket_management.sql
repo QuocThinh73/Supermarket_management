@@ -54,7 +54,7 @@ CREATE TABLE Employee (
 
 CREATE TABLE Warehouse (
 	WarehouseID		INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    Location		NVARCHAR(30)
+    Location		NVARCHAR(40)
 );
 
 CREATE TABLE WarehouseEmployee (
