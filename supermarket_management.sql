@@ -32,26 +32,20 @@ CREATE TABLE Product (
 
 CREATE TABLE Customer (
 	CustomerID		INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    LastName		NVARCHAR(10),
+    MiddleName		NVARCHAR(20),
     FirstName		NVARCHAR(10),
-    LastName		NVARCHAR(30),
     Phone			VARCHAR(15),
     Email			VARCHAR(30),
-    Street			VARCHAR(20),
-    District		VARCHAR(20),
-    City			VARCHAR(20),
-    Province		VARCHAR(20),
-    Country			VARCHAR(20)
+    Address			VARCHAR(120)
 );
 
 CREATE TABLE Employee (
 	EmployeeID		INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    LastName		NVARCHAR(10),
+    MiddleName		NVARCHAR(20),
     FirstName		NVARCHAR(10),
-    LastName		NVARCHAR(30),
-    Street			VARCHAR(20),
-    District		VARCHAR(20),
-    City			VARCHAR(20),
-    Province		VARCHAR(20),
-    Country			VARCHAR(20),
+    Address			VARCHAR(120),
     Gender			ENUM('Nam', 'Nữ'),
     DoB				DATE,
     ManagerID		INT UNSIGNED,
