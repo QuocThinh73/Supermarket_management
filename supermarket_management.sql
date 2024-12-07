@@ -165,7 +165,7 @@ CREATE TABLE PositionHistory (
 CREATE TABLE Bonus (
 	BonusID			INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     Amount			INT UNSIGNED,
-    Reason			NVARCHAR(20),
+    Reason			NVARCHAR(40),
     `Date`			DATE,
     EmployeeID		INT UNSIGNED,
     FOREIGN KEY(EmployeeID) REFERENCES Employee(EmployeeID)
@@ -175,7 +175,7 @@ CREATE TABLE Overtime (
 	OvertimeID		INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     OvertimeRate	INT UNSIGNED,
     Hours			INT UNSIGNED,
-    `Date`			DATE,
+    Date			DATE,
     EmployeeID		INT UNSIGNED,
     FOREIGN KEY(EmployeeID) REFERENCES Employee(EmployeeID)
 );
@@ -183,7 +183,7 @@ CREATE TABLE Overtime (
 CREATE TABLE Deduction (
 	DeductionID		INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     Amount			INT UNSIGNED,
-    Reason			NVARCHAR(20),
+    Reason			NVARCHAR(40),
     `Date`			DATE,
     EmployeeID		INT UNSIGNED,
     FOREIGN KEY(EmployeeID) REFERENCES Employee(EmployeeID)
