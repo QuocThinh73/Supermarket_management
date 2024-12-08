@@ -37,7 +37,7 @@ VALUES					(1			, 'Công ty Cổ phẩn Lương thực Phương Nam'		, '+849093
                         (19			, 'Công ty Cổ phần Thực phẩm Á Châu'			, '+842844500588'	, 'info@asiafoods.vn'				, 'www.asiafoods.vn'		, 'Số 9/2, Đường ĐT 743, Khu phố 1B, Phường An Phú, Thành phố Thuận An, Tỉnh Bình Dương'							),
                         (20			, 'Công ty cổ phần Micoem'						, '+842223714146'	, 'afotech@afotech.vn'				, 'afotech.vn'				, 'Số 8, Đường TS15, KCN Tiên Sơn, Xã Hoàn Sơn, Huyện Tiên Du, Tỉnh Bắc Ninh'										);
 
-INSERT INTO Product		(ProductID	, ProductName													, CategoryID	, SupplierID	, Price		, CostPrice	, Unit 		, ExpirationDate	)
+INSERT INTO Product		(ProductID	, ProductName													, CategoryID	, SupplierID	, CostPrice	, Price		, Unit 		, ExpirationDate	)
 VALUES					(1			, 'Thùng 30 gói mì Hảo Hảo tôm chua cay 75g'					, 4				, 6				, 95000		, 118000	, 'Thùng'	, '2024-12-31'		),
 						(2			, 'Mì Hảo Hảo vị tôm chua cay gói 75g'							, 4				, 6				, 3800		, 4400		, 'Gói'		, '2024-12-31'		),
                         (3			, 'Thùng 30 gói mì Hảo Hảo hương vị lẩu kim chi Hàn Quốc 75g'	, 4				, 6				, 98000		, 125000	, 'Thùng'	, '2024-12-31'		),
@@ -326,11 +326,11 @@ VALUES				(1				, 'Quản lý'				, 20000000		),
 
 
 INSERT INTO PositionHistory (EmployeeID		, PositionID	, StartDate		, EndDate    	)
-VALUES  					(1              , 2             , '2022-01-01'  , '2023-01-01'  ),
+VALUES  					(1              , 2             , '2022-01-01'  , '2022-12-31'  ),
 							(1              , 1             , '2023-01-01'  , NULL          ),
-							(2              , 3             , '2021-06-01'  , '2023-02-01'  ),
+							(2              , 3             , '2021-06-01'  , '2023-01-31'  ),
 							(2              , 1             , '2023-02-01'  , NULL          ),
-							(3              , 4             , '2022-05-01'  , '2023-09-01'  ),
+							(3              , 4             , '2022-05-01'  , '2023-08-31'  ),
 							(3              , 1             , '2023-09-01'  , NULL          ),
 							(4              , 4             , '2023-01-16'  , NULL          ),
 							(5              , 3             , '2023-12-01'  , NULL          ),
@@ -341,9 +341,9 @@ VALUES  					(1              , 2             , '2022-01-01'  , '2023-01-01'  ),
 							(10             , 3             , '2023-09-16'  , NULL          ),
 							(11             , 3             , '2021-11-01'  , NULL          ),
 							(12             , 4             , '2023-08-01'  , NULL          ),
-							(13             , 1             , '2023-04-01'  , NULL          ),
+							(13             , 3             , '2023-04-01'  , NULL          ),
 							(14             , 2             , '2023-05-01'  , NULL          ),
-							(15             , 3             , '2023-01-01'  , NULL          );
+							(15             , 3             , '2024-11-10'  , NULL          );
 
 
 INSERT INTO Bonus 	(BonusID		, Amount  	, Reason                     		, `Date`        , EmployeeID  )
@@ -440,5 +440,6 @@ VALUES 					(1              , 50000   	, 'Đi làm trễ'            		, '2023-0
 						(27             , 100000    , 'Không giữ vệ sinh'      		, '2023-09-20' 	, 12            ),
 						(28             , 80000     , 'Làm mất dụng cụ'        		, '2023-10-01' 	, 13            ),
 						(29             , 50000     , 'Đi làm trễ'            		, '2023-10-10' 	, 14            ),
-						(30             , 100000    , 'Không tuân thủ quy định'		, '2023-10-20' 	, 15            );
+						(30             , 100000    , 'Không tuân thủ quy định'		, '2023-10-20' 	, 15            ),
+                        (31             , 75000    	, 'Bị khách hàng mắng vốn'		, '2024-11-11' 	, 15            );
 
