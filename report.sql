@@ -1,89 +1,145 @@
 USE Supermarket_Management;
 
--- Doanh thu tổng theo tháng
-SELECT 
-    YEAR(DateTime) AS Year,
-    QUARTER(DateTime) AS Quarter,
-    MONTH(DateTime) AS Month,
-    SUM(s.Quantity * p.Price) AS TotalRevenue
-FROM 
-    StockSale s
-JOIN 
-    Product p ON s.ProductID = p.ProductID
-WHERE 
-    s.Type = 'Xuất'
-GROUP BY 
-    YEAR(DateTime), QUARTER(DateTime), MONTH(DateTime)
-ORDER BY 
-    Year, Quarter, Month;
+DELIMITER $$
 
--- Doanh thu tổng theo quý
-SELECT 
-    YEAR(DateTime) AS Year,
-    QUARTER(DateTime) AS Quarter,
-    SUM(s.Quantity * p.Price) AS TotalRevenue
-FROM 
-    StockSale s
-JOIN 
-    Product p ON s.ProductID = p.ProductID
-WHERE 
-    s.Type = 'Xuất'
-GROUP BY 
-    YEAR(DateTime), QUARTER(DateTime)
-ORDER BY 
-    Year, Quarter;
+DROP PROCEDURE IF EXISTS sp_CalculateTotalRevenueByPeriod;
+CREATE PROCEDURE sp_CalculateTotalRevenueByPeriod(
+    IN pPeriodType VARCHAR(10), -- 'month', 'quarter', 'year'
+    IN pYear INT,              -- Năm cần tính
+    IN pQuarterFilter INT,      -- Lọc theo quý cụ thể (NULL nếu không lọc)
+    IN pMonthFilter INT,        -- Lọc theo tháng cụ thể (NULL nếu không lọc)
+    IN pCategoryFilter VARCHAR(255) -- Lọc theo danh mục sản phẩm (NULL nếu không lọc)
+)
+BEGIN
+    -- Biến để lưu chuỗi GROUP BY
+    DECLARE v_GroupByClause VARCHAR(100);
+    DECLARE v_WhereClause VARCHAR(255);
 
--- Doanh thu tổng theo năm
-SELECT 
-    YEAR(DateTime) AS Year,
-    SUM(s.Quantity * p.Price) AS TotalRevenue
-FROM 
-    StockSale s
-JOIN 
-    Product p ON s.ProductID = p.ProductID
-WHERE 
-    s.Type = 'Xuất'
-GROUP BY 
-    YEAR(DateTime)
-ORDER BY 
-    Year;
+    -- Xác định chuỗi GROUP BY dựa trên loại thời kỳ
+    IF pPeriodType = 'month' THEN
+        SET v_GroupByClause = "YEAR(s.DateTime), MONTH(s.DateTime)";
+    ELSEIF pPeriodType = 'quarter' THEN
+        SET v_GroupByClause = "YEAR(s.DateTime), QUARTER(s.DateTime)";
+    ELSEIF pPeriodType = 'year' THEN
+        SET v_GroupByClause = "YEAR(s.DateTime)";
+    ELSE
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Invalid period type. Must be "month", "quarter", or "year".';
+    END IF;
 
--- Doanh thu theo danh mục sản phẩm
-SELECT 
-    c.CategoryName AS Category,
-    SUM(s.Quantity * p.Price) AS TotalRevenue
-FROM 
-    StockSale s
-JOIN 
-    Product p ON s.ProductID = p.ProductID
-JOIN 
-    Category c ON p.CategoryID = c.CategoryID
-WHERE 
-    s.Type = 'Xuất'
-GROUP BY 
-    c.CategoryName
-ORDER BY 
-    TotalRevenue DESC;
+    -- Xây dựng câu điều kiện WHERE
+    SET v_WhereClause = CONCAT(
+        "s.Type = 'Xuất' AND YEAR(s.DateTime) = ", pYear,
+        IF(pQuarterFilter IS NOT NULL, CONCAT(" AND QUARTER(s.DateTime) = ", pQuarterFilter), ""),
+        IF(pMonthFilter IS NOT NULL, CONCAT(" AND MONTH(s.DateTime) = ", pMonthFilter), ""),
+        IF(pCategoryFilter IS NOT NULL, CONCAT(" AND c.CategoryName = '", pCategoryFilter, "'"), "")
+    );
 
--- Báo cáo tồn kho
-SELECT 
-    p.ProductID,
-    p.ProductName,
-    c.CategoryName,
-    SUM(CASE WHEN s.Type = 'Nhập' THEN s.Quantity ELSE 0 END) -
-    SUM(CASE WHEN s.Type = 'Xuất' THEN s.Quantity ELSE 0 END) AS StockRemaining
-FROM 
-    StockSale s
-JOIN 
-    Product p ON s.ProductID = p.ProductID
-JOIN 
-    Category c ON p.CategoryID = c.CategoryID
-GROUP BY 
-    p.ProductID, p.ProductName, c.CategoryName
-HAVING 
-    StockRemaining > 0
-ORDER BY 
-    StockRemaining DESC;
+    -- Tạo truy vấn động
+    SET @query = CONCAT(
+        "SELECT ",
+        "YEAR(s.DateTime) AS Year, ",
+        CASE 
+            WHEN pPeriodType = 'month' THEN "MONTH(s.DateTime)" 
+            WHEN pPeriodType = 'quarter' THEN "QUARTER(s.DateTime)" 
+            ELSE "NULL" 
+        END, " AS Period, ",
+        "c.CategoryName AS Category, ",
+        "SUM(s.Quantity * p.Price) AS TotalRevenue ",
+        "FROM StockSale s ",
+        "JOIN Product p ON s.ProductID = p.ProductID ",
+        "JOIN Category c ON p.CategoryID = c.CategoryID ",
+        "WHERE ", v_WhereClause, " ",
+        "GROUP BY ", v_GroupByClause, ", c.CategoryName ",
+        "ORDER BY Year, Period, TotalRevenue DESC"
+    );
+
+    -- Chuẩn bị và thực thi truy vấn
+    PREPARE stmt FROM @query;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+END$$
+
+DELIMITER ;
+
+CALL sp_CalculateTotalRevenueByPeriod('year', NULL, NULL, NULL, 'Bánh kẹo các loại');
+CALL sp_CalculateTotalRevenueByPeriod('quarter', 2024, 2, NULL, NULL);
+CALL sp_CalculateTotalRevenueByPeriod('month', 2024, NULL, 10, 'Mì, miến, cháo, phở');
+CALL sp_CalculateTotalRevenueByPeriod('year', 2024, NULL, NULL, NULL);
+
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_GetStockReport;
+CREATE PROCEDURE sp_GetStockReport(
+    IN pYear INT,
+    IN pMonth INT,
+    IN pDay INT,
+    IN pCategoryFilter VARCHAR(255),
+    IN pProductFilter VARCHAR(255) -- Lọc theo tên sản phẩm (NULL nếu không lọc)
+)
+BEGIN
+    -- Khai báo các biến
+    DECLARE v_Year INT;
+    DECLARE v_Month INT;
+    DECLARE v_Day INT;
+
+    -- Kiểm tra các tham số đầu vào
+    IF (pYear IS NULL AND pMonth IS NULL AND pDay IS NULL) THEN
+        -- Nếu không có giá trị nào được cung cấp, dùng ngày hiện tại
+        SET v_Year = YEAR(CURRENT_DATE);
+        SET v_Month = MONTH(CURRENT_DATE);
+        SET v_Day = DAY(CURRENT_DATE);
+    ELSEIF (pYear IS NULL OR pMonth IS NULL OR pDay IS NULL) THEN
+        -- Nếu thiếu bất kỳ giá trị nào trong năm/tháng/ngày, báo lỗi
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Please provide complete values for year, month, and day.';
+    ELSE
+        -- Gán giá trị từ tham số đầu vào
+        SET v_Year = pYear;
+        SET v_Month = pMonth;
+        SET v_Day = pDay;
+    END IF;
+
+    -- Xây dựng câu điều kiện WHERE
+    DECLARE v_WhereClause VARCHAR(500);
+
+    SET v_WhereClause = CONCAT(
+        "YEAR(s.DateTime) = ", v_Year, " AND ",
+        "MONTH(s.DateTime) = ", v_Month, " AND ",
+        "DAY(s.DateTime) = ", v_Day, " ",
+        IF(pCategoryFilter IS NOT NULL, CONCAT("AND c.CategoryName = '", pCategoryFilter, "' "), ""),
+        IF(pProductFilter IS NOT NULL, CONCAT("AND p.ProductName = '", pProductFilter, "' "), "")
+    );
+
+    -- Truy vấn chính
+    SET @query = CONCAT(
+        "SELECT ",
+        "p.ProductID, ",
+        "p.ProductName, ",
+        "c.CategoryName, ",
+        "SUM(CASE WHEN s.Type = 'Nhập' THEN s.Quantity ELSE 0 END) - ",
+        "SUM(CASE WHEN s.Type = 'Xuất' THEN s.Quantity ELSE 0 END) AS StockRemaining ",
+        "FROM StockSale s ",
+        "JOIN Product p ON s.ProductID = p.ProductID ",
+        "JOIN Category c ON p.CategoryID = c.CategoryID ",
+        "WHERE ", v_WhereClause, " ",
+        "GROUP BY p.ProductID, p.ProductName, c.CategoryName ",
+        "HAVING StockRemaining > 0 ",
+        "ORDER BY StockRemaining DESC"
+    );
+
+    -- Thực thi truy vấn động
+    PREPARE stmt FROM @query;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+END$$
+
+DELIMITER ;
+
+CALL sp_GetStockReport(2024, 10, 7, 'Mì, miến, cháo, phở', NULL);
+CALL sp_GetStockReport(2024, 10, 7, NULL, 'Thùng 30 gói mì Hảo Hảo tôm chua cay 75g');
+CALL sp_GetStockReport(2024, 10, 7, 'Mì, miến, cháo, phở', 'Thùng 30 gói mì Hảo Hảo tôm chua cay 75g');
+CALL sp_GetStockReport(NULL, NULL, NULL, NULL, NULL);
 
 DELIMITER $$
 
