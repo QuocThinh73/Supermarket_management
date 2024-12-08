@@ -1,5 +1,90 @@
 USE Supermarket_Management;
 
+-- Doanh thu tổng theo tháng
+SELECT 
+    YEAR(DateTime) AS Year,
+    QUARTER(DateTime) AS Quarter,
+    MONTH(DateTime) AS Month,
+    SUM(s.Quantity * p.Price) AS TotalRevenue
+FROM 
+    StockSale s
+JOIN 
+    Product p ON s.ProductID = p.ProductID
+WHERE 
+    s.Type = 'Xuất'
+GROUP BY 
+    YEAR(DateTime), QUARTER(DateTime), MONTH(DateTime)
+ORDER BY 
+    Year, Quarter, Month;
+
+-- Doanh thu tổng theo quý
+SELECT 
+    YEAR(DateTime) AS Year,
+    QUARTER(DateTime) AS Quarter,
+    SUM(s.Quantity * p.Price) AS TotalRevenue
+FROM 
+    StockSale s
+JOIN 
+    Product p ON s.ProductID = p.ProductID
+WHERE 
+    s.Type = 'Xuất'
+GROUP BY 
+    YEAR(DateTime), QUARTER(DateTime)
+ORDER BY 
+    Year, Quarter;
+
+-- Doanh thu tổng theo năm
+SELECT 
+    YEAR(DateTime) AS Year,
+    SUM(s.Quantity * p.Price) AS TotalRevenue
+FROM 
+    StockSale s
+JOIN 
+    Product p ON s.ProductID = p.ProductID
+WHERE 
+    s.Type = 'Xuất'
+GROUP BY 
+    YEAR(DateTime)
+ORDER BY 
+    Year;
+
+-- Doanh thu theo danh mục sản phẩm
+SELECT 
+    c.CategoryName AS Category,
+    SUM(s.Quantity * p.Price) AS TotalRevenue
+FROM 
+    StockSale s
+JOIN 
+    Product p ON s.ProductID = p.ProductID
+JOIN 
+    Category c ON p.CategoryID = c.CategoryID
+WHERE 
+    s.Type = 'Xuất'
+GROUP BY 
+    c.CategoryName
+ORDER BY 
+    TotalRevenue DESC;
+
+-- Báo cáo tồn kho
+SELECT 
+    p.ProductID,
+    p.ProductName,
+    c.CategoryName,
+    SUM(CASE WHEN s.Type = 'Nhập' THEN s.Quantity ELSE 0 END) -
+    SUM(CASE WHEN s.Type = 'Xuất' THEN s.Quantity ELSE 0 END) AS StockRemaining
+FROM 
+    StockSale s
+JOIN 
+    Product p ON s.ProductID = p.ProductID
+JOIN 
+    Category c ON p.CategoryID = c.CategoryID
+GROUP BY 
+    p.ProductID, p.ProductName, c.CategoryName
+HAVING 
+    StockRemaining > 0
+ORDER BY 
+    StockRemaining DESC;
+
 DELIMITER $$
 
 DROP PROCEDURE IF EXISTS sp_CalculateMonthlyPayroll;
@@ -186,5 +271,5 @@ END$$
 
 DELIMITER ;
 
-CALL sp_EmployeeMonthlyRanking(2024, 11);
+CALL sp_EmployeeMonthlyRanking(2024, 6);
 
