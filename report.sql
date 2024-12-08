@@ -143,8 +143,8 @@ CALL sp_GetStockReport(NULL, NULL, NULL, NULL, NULL);
 
 DELIMITER $$
 
-DROP PROCEDURE IF EXISTS sp_GetCustomerInfo;
-CREATE PROCEDURE sp_GetCustomerInfo(
+DROP PROCEDURE IF EXISTS sp_GetCustomerAddress;
+CREATE PROCEDURE sp_GetCustomerAddress(
     IN p_CustomerID INT
 )
 BEGIN
@@ -175,8 +175,8 @@ END $$
 
 DELIMITER ;
 
-CALL sp_GetCustomerInfo(NULL);
-CALL sp_GetCustomerInfo(15);
+CALL sp_GetCustomerAddress(NULL);
+CALL sp_GetCustomerAddress(15);
 
 DELIMITER $$
 
