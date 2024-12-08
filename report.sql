@@ -143,6 +143,74 @@ CALL sp_GetStockReport(NULL, NULL, NULL, NULL, NULL);
 
 DELIMITER $$
 
+DROP PROCEDURE IF EXISTS sp_GetCustomerInfo;
+CREATE PROCEDURE sp_GetCustomerInfo(
+    IN p_CustomerID INT
+)
+BEGIN
+    IF p_CustomerID IS NULL THEN
+        -- Trường hợp không cung cấp CustomerID, hiển thị tất cả khách hàng
+        SELECT 
+            CustomerID, 
+            LastName, 
+            MiddleName, 
+            FirstName, 
+            Address
+        FROM 
+            Customer;
+    ELSE
+        -- Trường hợp cung cấp CustomerID, hiển thị khách hàng cụ thể
+        SELECT 
+            CustomerID, 
+            LastName, 
+            MiddleName, 
+            FirstName, 
+            Address
+        FROM 
+            Customer
+        WHERE 
+            CustomerID = p_CustomerID;
+    END IF;
+END $$
+
+DELIMITER ;
+
+CALL sp_GetCustomerInfo(NULL);
+CALL sp_GetCustomerInfo(15);
+
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_GetReturningCustomers;
+CREATE PROCEDURE sp_GetReturningCustomers()
+BEGIN
+    -- Tính tổng số lần thanh toán (cần cho tỷ lệ quay lại)
+    DECLARE totalPayments INT;
+    SELECT COUNT(PaymentID) INTO totalPayments FROM Payment;
+
+    -- Báo cáo khách hàng quay lại mua hàng
+    SELECT 
+        c.CustomerID,
+        c.LastName,
+        c.MiddleName,
+        c.FirstName,
+        COUNT(p.PaymentID) AS NumberOfPayments,
+        ROUND(((COUNT(p.PaymentID) - 1) / totalPayments) * 100, 2) AS ReturnRate -- Tỷ lệ quay lại (%)
+    FROM 
+        Customer c
+    LEFT JOIN 
+        Payment p ON c.CustomerID = p.CustomerID
+    GROUP BY 
+        c.CustomerID, c.LastName, c.MiddleName, c.FirstName
+    HAVING 
+        COUNT(p.PaymentID) > 1; -- Chỉ chọn khách hàng có hơn 1 lần thanh toán
+END $$
+
+DELIMITER ;
+
+CALL sp_GetReturningCustomers();
+
+DELIMITER $$
+
 DROP PROCEDURE IF EXISTS sp_CalculateMonthlyPayroll;
 CREATE PROCEDURE sp_CalculateMonthlyPayroll(
     IN pYear INT,
