@@ -1,3 +1,5 @@
+USE Supermarket_Management;
+
 DELIMITER $$
 
 DROP PROCEDURE IF EXISTS sp_CalculateMonthlyPayroll;
@@ -8,18 +10,19 @@ CREATE PROCEDURE sp_CalculateMonthlyPayroll(
 BEGIN
     DECLARE v_PayPeriodStart DATE;
     DECLARE v_PayPeriodEnd DATE;
+    DECLARE v_MonthDays INT;
 
-    -- Xác định kỳ lương: từ ngày đầu tháng đến ngày cuối tháng
     SET v_PayPeriodStart = MAKEDATE(pYear, 1) + INTERVAL (pMonth - 1) MONTH;
     SET v_PayPeriodEnd = LAST_DAY(v_PayPeriodStart);
 
-    -- Bảng tạm lưu kết quả lương, loại bỏ cột BaseSalary
+    SET v_MonthDays = DATEDIFF(v_PayPeriodEnd, v_PayPeriodStart) + 1;
+
     CREATE TEMPORARY TABLE IF NOT EXISTS TempPayrollResult (
         EmployeeID INT,
         EmployeeName NVARCHAR(50),
         PositionName NVARCHAR(50),
         NetBaseSalary DECIMAL(18,2),
-        ActualWorkingDays INT,
+        WorkingDays INT,
         TotalBonuses INT,
         TotalOvertimePay INT,
         TotalDeductions INT,
@@ -28,13 +31,12 @@ BEGIN
 
     TRUNCATE TABLE TempPayrollResult;
 
-    -- Chèn dữ liệu vào bảng tạm, không chèn BaseSalary nữa
     INSERT INTO TempPayrollResult (
         EmployeeID,
         EmployeeName,
         PositionName,
         NetBaseSalary,
-        ActualWorkingDays,
+        WorkingDays,
         TotalBonuses,
         TotalOvertimePay,
         TotalDeductions,
@@ -44,15 +46,14 @@ BEGIN
         e.EmployeeID,
         CONCAT(e.LastName, ' ', e.MiddleName, ' ', e.FirstName) AS EmployeeName,
         pos.PositionName,
-        -- Thay vì BaseSalary, ta chèn luôn giá trị tạm NetBaseSalary bằng công thức hoặc để tạm bằng pos.BaseSalary trước rồi UPDATE sau
         pos.BaseSalary AS NetBaseSalary,
         LEAST(
-            DATEDIFF(v_PayPeriodEnd, v_PayPeriodStart) + 1,
+            v_MonthDays,
             GREATEST(0, DATEDIFF(
                 LEAST(IFNULL(ph.EndDate, v_PayPeriodEnd), v_PayPeriodEnd),
                 GREATEST(ph.StartDate, v_PayPeriodStart)
             ) + 1)
-        ) AS ActualWorkingDays,
+        ) AS WorkingDays,
         0 AS TotalBonuses,
         0 AS TotalOvertimePay,
         0 AS TotalDeductions,
@@ -68,7 +69,6 @@ BEGIN
        AND (ph.EndDate IS NULL OR ph.EndDate >= v_PayPeriodStart)
     JOIN Position pos ON pos.PositionID = ph.PositionID;
 
-    -- Tính lại NetBaseSalary dựa trên EarliestStartDate
     UPDATE TempPayrollResult tr
     JOIN (
         SELECT EmployeeID, MIN(StartDate) AS EarliestStartDate
@@ -78,7 +78,6 @@ BEGIN
     SET tr.NetBaseSalary = tr.NetBaseSalary * 
                            (1 + FLOOR(TIMESTAMPDIFF(MONTH, est.EarliestStartDate, v_PayPeriodEnd)/6)*0.1);
 
-    -- Tính tổng Bonus trong kỳ
     UPDATE TempPayrollResult tr
     LEFT JOIN (
         SELECT EmployeeID, SUM(Amount) AS BonusSum
@@ -88,7 +87,6 @@ BEGIN
     ) b ON b.EmployeeID = tr.EmployeeID
     SET tr.TotalBonuses = COALESCE(b.BonusSum,0);
 
-    -- Tính tổng Overtime trong kỳ
     UPDATE TempPayrollResult tr
     LEFT JOIN (
         SELECT EmployeeID, SUM(Hours * OvertimeRate) AS OvertimeSum
@@ -98,7 +96,6 @@ BEGIN
     ) o ON o.EmployeeID = tr.EmployeeID
     SET tr.TotalOvertimePay = COALESCE(o.OvertimeSum,0);
 
-    -- Tính tổng Deduction trong kỳ
     UPDATE TempPayrollResult tr
     LEFT JOIN (
         SELECT EmployeeID, SUM(Amount) AS DeductionSum
@@ -108,20 +105,86 @@ BEGIN
     ) d ON d.EmployeeID = tr.EmployeeID
     SET tr.TotalDeductions = COALESCE(d.DeductionSum,0);
 
-    -- Tính NetSalary
     UPDATE TempPayrollResult
-    SET NetSalary = (NetBaseSalary * (ActualWorkingDays / 30))
+    SET NetSalary = (NetBaseSalary * (WorkingDays / v_MonthDays))
                     + TotalBonuses + TotalOvertimePay - TotalDeductions;
 
-    -- Loại bỏ nhân viên không làm việc trong kỳ
     DELETE FROM TempPayrollResult 
-    WHERE ActualWorkingDays <= 0;
+    WHERE WorkingDays <= 0;
 
-    -- Xuất kết quả cuối cùng, giờ đây không còn cột BaseSalary
-    SELECT * FROM TempPayrollResult;
+    SELECT EmployeeName, PositionName, NetBaseSalary, WorkingDays, TotalBonuses, TotalOvertimePay, TotalDeductions, NetSalary
+    FROM TempPayrollResult
+    ORDER BY NetSalary DESC;
 
 END$$
 
 DELIMITER ;
 
-CALL sp_CalculateMonthlyPayroll(2023, 9);
+CALL sp_CalculateMonthlyPayroll(2024, 8);
+
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_EmployeeMonthlyRanking;
+CREATE PROCEDURE sp_EmployeeMonthlyRanking(
+    IN pYear INT,
+    IN pMonth INT
+)
+BEGIN
+    DECLARE v_StartDate DATE;
+    DECLARE v_EndDate DATE;
+
+    SET v_StartDate = MAKEDATE(pYear, 1) + INTERVAL (pMonth - 1) MONTH;
+    SET v_EndDate = LAST_DAY(v_StartDate);
+
+    CREATE TEMPORARY TABLE IF NOT EXISTS TempRanking (
+        EmployeeID INT,
+        EmployeeName NVARCHAR(50),
+        OvertimeHours INT,
+        BonusCount INT,
+        DeductionCount INT,
+        Score INT
+    ) ENGINE=MEMORY;
+
+    TRUNCATE TABLE TempRanking;
+
+    INSERT INTO TempRanking (EmployeeID, EmployeeName, OvertimeHours, BonusCount, DeductionCount, Score)
+    SELECT
+        e.EmployeeID,
+        CONCAT(e.LastName, ' ', e.MiddleName, ' ', e.FirstName) AS EmployeeName,
+        COALESCE(o.OvertimeHours, 0) AS OvertimeHours,
+        COALESCE(b.BonusCount, 0) AS BonusCount,
+        COALESCE(d.DeductionCount, 0) AS DeductionCount,
+        0 AS Score
+    FROM Employee e
+    LEFT JOIN (
+        SELECT EmployeeID, SUM(Hours) AS OvertimeHours
+        FROM Overtime
+        WHERE Date BETWEEN v_StartDate AND v_EndDate
+        GROUP BY EmployeeID
+    ) o ON e.EmployeeID = o.EmployeeID
+    LEFT JOIN (
+        SELECT EmployeeID, COUNT(*) AS BonusCount
+        FROM Bonus
+        WHERE `Date` BETWEEN v_StartDate AND v_EndDate
+        GROUP BY EmployeeID
+    ) b ON e.EmployeeID = b.EmployeeID
+    LEFT JOIN (
+        SELECT EmployeeID, COUNT(*) AS DeductionCount
+        FROM Deduction
+        WHERE `Date` BETWEEN v_StartDate AND v_EndDate
+        GROUP BY EmployeeID
+    ) d ON e.EmployeeID = d.EmployeeID;
+
+    UPDATE TempRanking
+    SET Score = OvertimeHours + BonusCount - DeductionCount;
+
+    SELECT EmployeeName, OvertimeHours, BonusCount, DeductionCount, Score
+    FROM TempRanking
+    ORDER BY Score DESC, EmployeeName ASC;
+
+END$$
+
+DELIMITER ;
+
+CALL sp_EmployeeMonthlyRanking(2024, 11);
+
