@@ -106,12 +106,12 @@ BEGIN
         EmployeeID INT,
         EmployeeName NVARCHAR(50),
         PositionName NVARCHAR(50),
-        NetBaseSalary DECIMAL(18,2),
+        NetBaseSalary INT,
         WorkingDays INT,
         TotalBonuses INT,
         TotalOvertimePay INT,
         TotalDeductions INT,
-        NetSalary DECIMAL(18,2)
+        NetSalary INT
     ) ENGINE=MEMORY;
 
     TRUNCATE TABLE TempPayrollResult;
