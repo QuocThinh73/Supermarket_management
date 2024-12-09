@@ -209,6 +209,8 @@ DELIMITER ;
 
 CALL sp_GetReturningCustomers();
 
+-- Tính lương
+
 DELIMITER $$
 
 DROP PROCEDURE IF EXISTS sp_CalculateMonthlyPayroll;
@@ -329,7 +331,9 @@ END$$
 
 DELIMITER ;
 
-CALL sp_CalculateMonthlyPayroll(2024, 8);
+CALL sp_CalculateMonthlyPayroll(2024, 6);
+
+-- Bảng xếp hạng
 
 DELIMITER $$
 
@@ -396,4 +400,3 @@ END$$
 DELIMITER ;
 
 CALL sp_EmployeeMonthlyRanking(2024, 6);
-
