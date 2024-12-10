@@ -119,7 +119,7 @@ CREATE TABLE Product_Order (
 	ProductID		INT UNSIGNED NOT NULL,
     OrderID			INT UNSIGNED NOT NULL,
     QuantitySold	INT UNSIGNED NOT NULL,
-    UnitPrice		INT UNSIGNED NOT NULL,
+    Cost		    INT UNSIGNED NOT NULL,
     PRIMARY KEY(ProductID, OrderID),
     FOREIGN KEY(ProductID) REFERENCES Product(ProductID),
     FOREIGN KEY(OrderID) REFERENCES `Order`(OrderID)
