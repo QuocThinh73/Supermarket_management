@@ -18,6 +18,7 @@ CREATE TABLE Supplier (
 );
 
 CREATE TABLE Product (
+<<<<<<< HEAD
 	ProductID			INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     ProductName			NVARCHAR(70) NOT NULL,
     CategoryID			INT UNSIGNED NOT NULL,
@@ -27,6 +28,17 @@ CREATE TABLE Product (
     Unit				NVARCHAR(10) NOT NULL,
     ExpirationDate		DATETIME,
     QuantityInStock   	INT UNSIGNED NOT NULL DEFAULT 0,
+=======
+	ProductID		INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    ProductName		NVARCHAR(70) NOT NULL,
+    CategoryID		INT UNSIGNED NOT NULL,
+    SupplierID		INT UNSIGNED NOT NULL,
+    CostPrice		INT UNSIGNED NOT NULL,
+    Price			INT UNSIGNED NOT NULL,
+    Unit			NVARCHAR(10) NOT NULL,
+    ExpirationDate	DATETIME,
+    QuantityInStock   INT UNSIGNED NOT NULL DEFAULT 0,
+>>>>>>> 930ed399eb648b30d056a6abca64d3aaefa7a1eb
     FOREIGN KEY(CategoryID) REFERENCES Category(CategoryID),
     FOREIGN KEY(SupplierID) REFERENCES Supplier(SupplierID)
 );
@@ -120,7 +132,11 @@ CREATE TABLE Product_Order (
 	ProductID		INT UNSIGNED NOT NULL,
     OrderID			INT UNSIGNED NOT NULL,
     QuantitySold	INT UNSIGNED NOT NULL,
+<<<<<<< HEAD
     Cost			INT UNSIGNED NOT NULL,
+=======
+    Cost		    INT UNSIGNED NOT NULL,
+>>>>>>> 930ed399eb648b30d056a6abca64d3aaefa7a1eb
     PRIMARY KEY(ProductID, OrderID),
     FOREIGN KEY(ProductID) REFERENCES Product(ProductID),
     FOREIGN KEY(OrderID) REFERENCES `Order`(OrderID)
@@ -274,6 +290,7 @@ BEGIN
     END IF;
 END$$
 
+<<<<<<< HEAD
 CREATE TRIGGER before_insert_discountproduct_product
 BEFORE INSERT ON DiscountProduct_Product
 FOR EACH ROW
@@ -329,6 +346,8 @@ BEGIN
     END IF;
 END$$
 
+=======
+>>>>>>> 930ed399eb648b30d056a6abca64d3aaefa7a1eb
 CREATE TRIGGER Update_QuantityInStock
 AFTER INSERT ON stocksale
 FOR EACH ROW
@@ -374,6 +393,10 @@ BEGIN
     END IF;
 END$$
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 930ed399eb648b30d056a6abca64d3aaefa7a1eb
 CREATE TRIGGER After_Insert_StockSale
 AFTER INSERT ON stocksale
 FOR EACH ROW
@@ -392,6 +415,9 @@ BEGIN
     WHERE ProductID = NEW.ProductID;
 END$$
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 930ed399eb648b30d056a6abca64d3aaefa7a1eb
 DELIMITER ;
 
