@@ -105,24 +105,23 @@ CREATE TABLE DiscountOrder (
     EndDate					DATETIME NOT NULL,
     DiscountType			ENUM('Phần trăm', 'Số tiền') NOT NULL,
     DiscountValue			INT UNSIGNED NOT NULL,
-    MinimumOrderAmount		INT UNSIGNED NOT NULL DEFAULT 0
+	MinimumOrderAmount		INT UNSIGNED NOT NULL DEFAULT 0
 );
 
 CREATE TABLE `Order` (
 	OrderID				INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     EmployeeID			INT UNSIGNED NOT NULL,
-    DiscountOrderID		INT UNSIGNED NOT NULL,
     OrderAmount			INT UNSIGNED NOT NULL DEFAULT 0,
     DiscountAmount		INT UNSIGNED NOT NULL DEFAULT 0,
-    FOREIGN KEY(EmployeeID) REFERENCES Employee(EmployeeID),
-    FOREIGN KEY(DiscountOrderID) REFERENCES DiscountOrder(DiscountOrderID)
+    `DateTime`			DATETIME NOT NULL,
+    FOREIGN KEY(EmployeeID) REFERENCES Employee(EmployeeID)
 );
 
 CREATE TABLE Product_Order (
 	ProductID		INT UNSIGNED NOT NULL,
     OrderID			INT UNSIGNED NOT NULL,
     QuantitySold	INT UNSIGNED NOT NULL,
-    Cost		    INT UNSIGNED NOT NULL,
+    SubAmount       INT UNSIGNED NOT NULL,
     PRIMARY KEY(ProductID, OrderID),
     FOREIGN KEY(ProductID) REFERENCES Product(ProductID),
     FOREIGN KEY(OrderID) REFERENCES `Order`(OrderID)
@@ -373,42 +372,8 @@ BEGIN
     END IF;
 END$$
 
-CREATE TRIGGER before_insert_order
-BEFORE INSERT ON `Order`
-FOR EACH ROW
-BEGIN
-    DECLARE min_order_amount INT;
-
-    SELECT MinimumOrderAmount
-    INTO min_order_amount
-    FROM DiscountOrder
-    WHERE DiscountOrderID = NEW.DiscountOrderID;
-
-    IF NEW.OrderAmount < min_order_amount THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Đơn hàng không đủ điều kiện để áp dụng chương trình giảm giá.';
-    END IF;
-END$$
-
-CREATE TRIGGER before_update_order
-BEFORE UPDATE ON `Order`
-FOR EACH ROW
-BEGIN
-    DECLARE min_order_amount INT;
-
-    SELECT MinimumOrderAmount
-    INTO min_order_amount
-    FROM DiscountOrder
-    WHERE DiscountOrderID = NEW.DiscountOrderID;
-
-    IF NEW.OrderAmount < min_order_amount THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Đơn hàng không đủ điều kiện để áp dụng chương trình giảm giá.';
-    END IF;
-END$$
-
 CREATE TRIGGER Before_Insert_StockSale
-BEFORE INSERT ON stocksale
+BEFORE INSERT ON StockSale
 FOR EACH ROW
 BEGIN
     DECLARE current_stock INT;
@@ -417,44 +382,189 @@ BEGIN
     FROM Product
     WHERE ProductID = NEW.ProductID;
 
-    IF NEW.Quantity > current_stock THEN
+    IF NEW.`Type` = 'Xuất' AND NEW.Quantity > current_stock THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Error: Quantity exceeds available stock.';
+        SET MESSAGE_TEXT = 'Số lượng tồn kho không đủ để xuất kho.';
     END IF;
 END$$
 
 CREATE TRIGGER Before_Update_StockSale
-BEFORE UPDATE ON stocksale
+BEFORE UPDATE ON StockSale
 FOR EACH ROW
 BEGIN
     DECLARE current_stock INT;
+    DECLARE stock_adjustment INT;
 
     SELECT QuantityInStock INTO current_stock
     FROM Product
     WHERE ProductID = NEW.ProductID;
 
-    IF NEW.Quantity > current_stock THEN
+    SET stock_adjustment = NEW.Quantity - OLD.Quantity;
+
+    IF NEW.`Type` = 'Xuất' AND stock_adjustment > current_stock THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Error: Quantity exceeds available stock.';
+        SET MESSAGE_TEXT = 'Số lượng tồn kho không đủ để xuất kho.';
     END IF;
 END$$
 
 CREATE TRIGGER After_Insert_StockSale
-AFTER INSERT ON stocksale
+AFTER INSERT ON StockSale
 FOR EACH ROW
 BEGIN
-    UPDATE Product
-    SET QuantityInStock = QuantityInStock - NEW.Quantity
-    WHERE ProductID = NEW.ProductID;
+    IF NEW.`Type` = 'Nhập' THEN
+        UPDATE Product
+        SET QuantityInStock = QuantityInStock + NEW.Quantity
+        WHERE ProductID = NEW.ProductID;
+    END IF;
+
+    IF NEW.`Type` = 'Xuất' THEN
+        UPDATE Product
+        SET QuantityInStock = QuantityInStock - NEW.Quantity
+        WHERE ProductID = NEW.ProductID;
+    END IF;
 END$$
 
 CREATE TRIGGER After_Update_StockSale
-AFTER UPDATE ON stocksale
+AFTER UPDATE ON StockSale
 FOR EACH ROW
 BEGIN
-    UPDATE Product
-    SET QuantityInStock = QuantityInStock - (NEW.Quantity - OLD.Quantity)
+    IF NEW.`Type` = 'Nhập' THEN
+        UPDATE Product
+        SET QuantityInStock = QuantityInStock + (NEW.Quantity - OLD.Quantity)
+        WHERE ProductID = NEW.ProductID;
+    END IF;
+
+    IF NEW.`Type` = 'Xuất' THEN
+        UPDATE Product
+        SET QuantityInStock = QuantityInStock - (NEW.Quantity - OLD.Quantity)
+        WHERE ProductID = NEW.ProductID;
+    END IF;
+END$$
+
+CREATE TRIGGER Before_ProductOrder_Insert
+BEFORE INSERT ON Product_Order
+FOR EACH ROW
+BEGIN
+    DECLARE product_cost INT;
+
+    SELECT Price INTO product_cost
+    FROM Product
     WHERE ProductID = NEW.ProductID;
+
+    SET NEW.SubAmount = NEW.QuantitySold * product_cost;
+END$$
+
+CREATE TRIGGER Before_ProductOrder_Update
+BEFORE UPDATE ON Product_Order
+FOR EACH ROW
+BEGIN
+    DECLARE product_cost INT;
+
+    SELECT Price INTO product_cost
+    FROM Product
+    WHERE ProductID = NEW.ProductID;
+
+    SET NEW.SubAmount = NEW.QuantitySold * product_cost;
+END$$
+
+CREATE PROCEDURE UpdateOrderAmounts(IN p_OrderID INT)
+BEGIN
+    DECLARE total_amount INT DEFAULT 0;
+    DECLARE discount_value INT;
+    DECLARE discount_type ENUM('Phần trăm', 'Số tiền');
+    DECLARE min_amount INT;
+    DECLARE order_datetime DATETIME;
+    DECLARE tmp_discount_amount INT DEFAULT 0;
+
+    -- Lấy thời gian Order
+    SELECT `DateTime` INTO order_datetime
+    FROM `Order`
+    WHERE OrderID = p_OrderID;
+
+    -- Tính tổng OrderAmount
+    SELECT IFNULL(SUM(SubAmount), 0) INTO total_amount
+    FROM Product_Order
+    WHERE OrderID = p_OrderID;
+
+    -- Tìm DiscountOrder phù hợp
+    SELECT DiscountValue, DiscountType, MinimumOrderAmount
+    INTO discount_value, discount_type, min_amount
+    FROM DiscountOrder
+    WHERE StartDate <= order_datetime
+      AND EndDate >= order_datetime
+      AND total_amount >= MinimumOrderAmount
+    ORDER BY DiscountValue DESC
+    LIMIT 1;
+
+    -- Tính DiscountAmount
+    IF discount_value IS NOT NULL THEN
+        IF discount_type = 'Phần trăm' THEN
+            SET tmp_discount_amount = FLOOR(total_amount * discount_value / 100);
+        ELSE
+            SET tmp_discount_amount = discount_value;
+        END IF;
+    ELSE
+        SET tmp_discount_amount = 0;
+    END IF;
+
+    -- Cập nhật Order
+    UPDATE `Order`
+    SET OrderAmount = total_amount,
+        DiscountAmount = tmp_discount_amount
+    WHERE OrderID = p_OrderID;
+END$$
+
+CREATE TRIGGER After_ProductOrder_Insert
+AFTER INSERT ON Product_Order
+FOR EACH ROW
+BEGIN
+    CALL UpdateOrderAmounts(NEW.OrderID);
+END$$
+
+CREATE TRIGGER After_ProductOrder_Update
+AFTER UPDATE ON Product_Order
+FOR EACH ROW
+BEGIN
+    CALL UpdateOrderAmounts(NEW.OrderID);
+END$$
+
+CREATE TRIGGER After_ProductOrder_Delete
+AFTER DELETE ON Product_Order
+FOR EACH ROW
+BEGIN
+    CALL UpdateOrderAmounts(OLD.OrderID);
+END$$
+
+CREATE TRIGGER Before_Payment_Insert
+BEFORE INSERT ON Payment
+FOR EACH ROW
+BEGIN
+    DECLARE order_amount INT;
+    DECLARE discount_amount INT;
+
+    -- Lấy OrderAmount và DiscountAmount từ bảng Order
+    SELECT OrderAmount, DiscountAmount INTO order_amount, discount_amount
+    FROM `Order`
+    WHERE OrderID = NEW.OrderID;
+
+    -- Đặt PaymentAmount = OrderAmount - DiscountAmount
+    SET NEW.PaymentAmount = order_amount - discount_amount;
+END$$
+
+CREATE TRIGGER Before_Payment_Update
+BEFORE UPDATE ON Payment
+FOR EACH ROW
+BEGIN
+    DECLARE order_amount INT;
+    DECLARE discount_amount INT;
+
+    -- Lấy OrderAmount và DiscountAmount từ bảng Order
+    SELECT OrderAmount, DiscountAmount INTO order_amount, discount_amount
+    FROM `Order`
+    WHERE OrderID = NEW.OrderID;
+
+    -- Đặt PaymentAmount = OrderAmount - DiscountAmount
+    SET NEW.PaymentAmount = order_amount - discount_amount;
 END$$
 
 DELIMITER ;

@@ -141,28 +141,21 @@ CALL sp_GetStockReport(2024, 10, 7, NULL, 'Thùng 30 gói mì Hảo Hảo tôm c
 CALL sp_GetStockReport(2024, 10, 7, 'Mì, miến, cháo, phở', 'Thùng 30 gói mì Hảo Hảo tôm chua cay 75g');
 CALL sp_GetStockReport(NULL, NULL, NULL, NULL, NULL);
 
+-- Hiển thị sản phẩm sắp hết hàng
+
 DELIMITER $$
 
-CREATE PROCEDURE NotifyLowStockProducts(low_stock_limit INT)
+DROP PROCEDURE IF EXISTS LowStockProducts;
+CREATE PROCEDURE LowStockProducts(IN threshold INT)
 BEGIN
-    -- Tìm sản phẩm sắp hết hàng
-    SELECT ProductID, ProductName, QuantityInStock
+    SELECT ProductName, QuantityInStock
     FROM Product
-    WHERE QuantityInStock < low_stock_limit;
-
-    -- Xuất thông báo nếu có sản phẩm sắp hết hàng
-    IF (SELECT COUNT(*) 
-        FROM Product 
-        WHERE QuantityInStock < low_stock_limit) > 0 THEN
-        SELECT CONCAT('Warning: Some products have stock below ', low_stock_limit) AS Notification;
-    ELSE
-        SELECT 'All products are sufficiently stocked.' AS Notification;
-    END IF;
+    WHERE QuantityInStock <= threshold;
 END$$
 
 DELIMITER ;
 
-CALL NotifyLowStockProducts(10);
+CALL LowStockProducts(100);
 
 -- Hiện địa chỉ của khách hàng
 
@@ -240,8 +233,8 @@ CALL sp_GetReturningCustomers();
 
 DELIMITER $$
 
-DROP PROCEDURE IF EXISTS sp_CalculateMonthlyPayroll;
-CREATE PROCEDURE sp_CalculateMonthlyPayroll(
+DROP PROCEDURE IF EXISTS CalculateMonthlyPayroll;
+CREATE PROCEDURE CalculateMonthlyPayroll(
     IN pYear INT,
     IN pMonth INT
 )
@@ -358,14 +351,14 @@ END$$
 
 DELIMITER ;
 
-CALL sp_CalculateMonthlyPayroll(2024, 6);
+CALL CalculateMonthlyPayroll(2024, 6);
 
 -- Bảng xếp hạng
 
 DELIMITER $$
 
-DROP PROCEDURE IF EXISTS sp_EmployeeMonthlyRanking;
-CREATE PROCEDURE sp_EmployeeMonthlyRanking(
+DROP PROCEDURE IF EXISTS EmployeeMonthlyRanking;
+CREATE PROCEDURE EmployeeMonthlyRanking(
     IN pYear INT,
     IN pMonth INT
 )
@@ -426,7 +419,7 @@ END$$
 
 DELIMITER ;
 
-CALL sp_EmployeeMonthlyRanking(2024, 6);
+CALL EmployeeMonthlyRanking(2024, 6);
 
 -- Tính đơn hàng
 
