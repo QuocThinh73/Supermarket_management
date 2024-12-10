@@ -164,6 +164,8 @@ DELIMITER ;
 
 CALL NotifyLowStockProducts(10);
 
+-- Hiện địa chỉ của khách hàng
+
 DELIMITER $$
 
 DROP PROCEDURE IF EXISTS sp_GetCustomerAddress;
@@ -200,6 +202,8 @@ DELIMITER ;
 
 CALL sp_GetCustomerAddress(NULL);
 CALL sp_GetCustomerAddress(15);
+
+-- Khách hàng quay lại
 
 DELIMITER $$
 
@@ -423,3 +427,70 @@ END$$
 DELIMITER ;
 
 CALL sp_EmployeeMonthlyRanking(2024, 6);
+
+-- Tính đơn hàng
+
+DELIMITER $$
+
+CREATE PROCEDURE TEST()
+BEGIN
+    -- Declare variables for reusable calculations
+    DECLARE TotalAmountPerOrder DECIMAL(10, 2);
+    DECLARE DiscountAmount DECIMAL(10, 2);
+
+    -- Select and calculate order details
+    SELECT 
+        po.OrderID,
+        GROUP_CONCAT(po.ProductID) AS ProductIDs, -- List of ProductIDs
+        
+        -- Calculate TotalAmount and round it
+        @TotalAmountPerOrder := ROUND(SUM(
+            CASE 
+                WHEN dp.DiscountType = 'Số tiền' THEN 
+                    (p.Price - dp.DiscountValue) * po.QuantitySold
+                WHEN dp.DiscountType = 'Phần trăm' THEN 
+                    (p.Price - (p.Price * dp.DiscountValue / 100)) * po.QuantitySold
+                ELSE 
+                    p.Price * po.QuantitySold -- Default case with no discount
+            END
+        ), 2) AS SubTotalAmount,
+
+        -- Calculate DiscountAmount and round it
+        @DiscountAmount := ROUND(
+            CASE 
+                WHEN @TotalAmountPerOrder >= do.MinimumOrderAmount THEN
+                    CASE 
+                        WHEN do.DiscountType = 'Số tiền' THEN 
+                            do.DiscountValue
+                        WHEN do.DiscountType = 'Phần trăm' THEN 
+                            @TotalAmountPerOrder * do.DiscountValue / 100
+                        ELSE 
+                            0
+                    END
+                ELSE 
+                    0 -- No discount if TotalAmount does not meet the minimum requirement
+            END, 2
+        ) AS DiscountAmount,
+
+        -- Calculate OrderAmount and round it
+        ROUND(
+            CASE
+                WHEN @TotalAmountPerOrder >= do.MinimumOrderAmount THEN
+                    @TotalAmountPerOrder - @DiscountAmount
+                ELSE 
+                    @TotalAmountPerOrder
+            END, 2
+        ) AS OrderAmount
+
+    FROM 
+        Product_Order po
+    JOIN Product p ON po.ProductID = p.ProductID
+    LEFT JOIN DiscountProduct dp ON p.ProductID = dp.DiscountProductID
+    LEFT JOIN `Order` o ON po.OrderID = o.OrderID
+    LEFT JOIN DiscountOrder do ON o.DiscountOrderID = do.DiscountOrderID
+    GROUP BY po.OrderID;
+END$$
+
+DELIMITER ;
+
+CALL ();
