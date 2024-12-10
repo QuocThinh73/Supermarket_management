@@ -476,17 +476,14 @@ BEGIN
     DECLARE order_datetime DATETIME;
     DECLARE tmp_discount_amount INT DEFAULT 0;
 
-    -- Lấy thời gian Order
     SELECT `DateTime` INTO order_datetime
     FROM `Order`
     WHERE OrderID = p_OrderID;
 
-    -- Tính tổng OrderAmount
     SELECT IFNULL(SUM(SubAmount), 0) INTO total_amount
     FROM Product_Order
     WHERE OrderID = p_OrderID;
 
-    -- Tìm DiscountOrder phù hợp
     SELECT DiscountValue, DiscountType, MinimumOrderAmount
     INTO discount_value, discount_type, min_amount
     FROM DiscountOrder
@@ -496,7 +493,6 @@ BEGIN
     ORDER BY DiscountValue DESC
     LIMIT 1;
 
-    -- Tính DiscountAmount
     IF discount_value IS NOT NULL THEN
         IF discount_type = 'Phần trăm' THEN
             SET tmp_discount_amount = FLOOR(total_amount * discount_value / 100);
@@ -542,12 +538,10 @@ BEGIN
     DECLARE order_amount INT;
     DECLARE discount_amount INT;
 
-    -- Lấy OrderAmount và DiscountAmount từ bảng Order
     SELECT OrderAmount, DiscountAmount INTO order_amount, discount_amount
     FROM `Order`
     WHERE OrderID = NEW.OrderID;
 
-    -- Đặt PaymentAmount = OrderAmount - DiscountAmount
     SET NEW.PaymentAmount = order_amount - discount_amount;
 END$$
 
@@ -558,12 +552,10 @@ BEGIN
     DECLARE order_amount INT;
     DECLARE discount_amount INT;
 
-    -- Lấy OrderAmount và DiscountAmount từ bảng Order
     SELECT OrderAmount, DiscountAmount INTO order_amount, discount_amount
     FROM `Order`
     WHERE OrderID = NEW.OrderID;
 
-    -- Đặt PaymentAmount = OrderAmount - DiscountAmount
     SET NEW.PaymentAmount = order_amount - discount_amount;
 END$$
 
