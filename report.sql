@@ -432,7 +432,7 @@ CALL sp_EmployeeMonthlyRanking(2024, 6);
 
 DELIMITER $$
 
-CREATE PROCEDURE TEST()
+CREATE PROCEDURE sp_CalculateOrderAmount()
 BEGIN
     -- Declare variables for reusable calculations
     DECLARE TotalAmountPerOrder DECIMAL(10, 2);
@@ -493,4 +493,4 @@ END$$
 
 DELIMITER ;
 
-CALL ();
+CALL sp_CalculateOrderAmount();
