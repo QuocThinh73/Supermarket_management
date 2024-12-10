@@ -18,14 +18,15 @@ CREATE TABLE Supplier (
 );
 
 CREATE TABLE Product (
-	ProductID		INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    ProductName		NVARCHAR(70) NOT NULL,
-    CategoryID		INT UNSIGNED NOT NULL,
-    SupplierID		INT UNSIGNED NOT NULL,
-    CostPrice		INT UNSIGNED NOT NULL,
-    Price			INT UNSIGNED NOT NULL,
-    Unit			NVARCHAR(10) NOT NULL,
-    ExpirationDate	DATETIME,
+	ProductID			INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    ProductName			NVARCHAR(70) NOT NULL,
+    CategoryID			INT UNSIGNED NOT NULL,
+    SupplierID			INT UNSIGNED NOT NULL,
+    CostPrice			INT UNSIGNED NOT NULL,
+    Price				INT UNSIGNED NOT NULL,
+    Unit				NVARCHAR(10) NOT NULL,
+    ExpirationDate		DATETIME,
+    QuantityInStock   	INT UNSIGNED NOT NULL DEFAULT 0,
     FOREIGN KEY(CategoryID) REFERENCES Category(CategoryID),
     FOREIGN KEY(SupplierID) REFERENCES Supplier(SupplierID)
 );
@@ -92,8 +93,8 @@ CREATE TABLE DiscountProduct_Product (
 	DiscountProductID		INT UNSIGNED NOT NULL,
     ProductID				INT UNSIGNED NOT NULL,
     PRIMARY KEY(DiscountProductID, ProductID),
-    FOREIGN KEY(DiscountProductID) REFERENCES DiscountProduct(DiscountProductID),
-    FOREIGN KEY(ProductID) REFERENCES Product(ProductID)
+    FOREIGN KEY(DiscountProductID) REFERENCES DiscountProduct(DiscountProductID) ON DELETE CASCADE,
+    FOREIGN KEY(ProductID) REFERENCES Product(ProductID) ON DELETE CASCADE
 );
 
 CREATE TABLE DiscountOrder (
@@ -119,7 +120,7 @@ CREATE TABLE Product_Order (
 	ProductID		INT UNSIGNED NOT NULL,
     OrderID			INT UNSIGNED NOT NULL,
     QuantitySold	INT UNSIGNED NOT NULL,
-    UnitPrice		INT UNSIGNED NOT NULL,
+    Cost			INT UNSIGNED NOT NULL,
     PRIMARY KEY(ProductID, OrderID),
     FOREIGN KEY(ProductID) REFERENCES Product(ProductID),
     FOREIGN KEY(OrderID) REFERENCES `Order`(OrderID)
@@ -170,7 +171,7 @@ CREATE TABLE Bonus (
     Reason			NVARCHAR(50),
     `Date`			DATE NOT NULL,
     EmployeeID		INT UNSIGNED NOT NULL,
-    FOREIGN KEY(EmployeeID) REFERENCES Employee(EmployeeID)
+    FOREIGN KEY(EmployeeID) REFERENCES Employee(EmployeeID) ON DELETE CASCADE
 );
 
 CREATE TABLE Overtime (
@@ -179,7 +180,7 @@ CREATE TABLE Overtime (
     Hours			INT UNSIGNED NOT NULL,
     `Date`			DATE NOT NULL,
     EmployeeID		INT UNSIGNED NOT NULL,
-    FOREIGN KEY(EmployeeID) REFERENCES Employee(EmployeeID)
+    FOREIGN KEY(EmployeeID) REFERENCES Employee(EmployeeID) ON DELETE CASCADE
 );
 
 CREATE TABLE Deduction (
@@ -188,7 +189,7 @@ CREATE TABLE Deduction (
     Reason			NVARCHAR(50),
     `Date`			DATE NOT NULL,
     EmployeeID		INT UNSIGNED NOT NULL,
-    FOREIGN KEY(EmployeeID) REFERENCES Employee(EmployeeID)
+    FOREIGN KEY(EmployeeID) REFERENCES Employee(EmployeeID) ON DELETE CASCADE
 );
 
 DELIMITER $$
@@ -199,7 +200,7 @@ FOR EACH ROW
 BEGIN
     IF NEW.Price < NEW.CostPrice THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Price must be greater than or equal to CostPrice.';
+        SET MESSAGE_TEXT = 'Giá bán phải lớn hơn hoặc bằng giá vốn.';
     END IF;
 END$$
 
@@ -209,7 +210,7 @@ FOR EACH ROW
 BEGIN
     IF NEW.Price < NEW.CostPrice THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Price must be greater than or equal to CostPrice.';
+        SET MESSAGE_TEXT = 'Giá bán phải lớn hơn hoặc bằng giá vốn.';
     END IF;
 END$$
 
@@ -219,7 +220,7 @@ FOR EACH ROW
 BEGIN
     IF NEW.EndDate <= NEW.StartDate THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'EndDate must be greater than StartDate.';
+        SET MESSAGE_TEXT = 'Thời gian kết thúc phải lớn hơn thời gian bắt đầu.';
     END IF;
 END$$
 
@@ -229,7 +230,7 @@ FOR EACH ROW
 BEGIN
     IF NEW.EndDate <= NEW.StartDate THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'EndDate must be greater than StartDate.';
+        SET MESSAGE_TEXT = 'Thời gian kết thúc phải lớn hơn thời gian bắt đầu.';
     END IF;
 END$$
 
@@ -239,7 +240,7 @@ FOR EACH ROW
 BEGIN
     IF NEW.EndDate <= NEW.StartDate THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'EndDate must be greater than StartDate for DiscountOrder.';
+        SET MESSAGE_TEXT = 'Thời gian kết thúc phải lớn hơn thời gian bắt đầu.';
     END IF;
 END$$
 
@@ -249,7 +250,7 @@ FOR EACH ROW
 BEGIN
     IF NEW.EndDate <= NEW.StartDate THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'EndDate must be greater than StartDate for DiscountOrder.';
+        SET MESSAGE_TEXT = 'Thời gian kết thúc phải lớn hơn thời gian bắt đầu.';
     END IF;
 END$$
 
@@ -259,7 +260,7 @@ FOR EACH ROW
 BEGIN
     IF NEW.EndDate <= NEW.StartDate THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'EndDate must be greater than StartDate.';
+        SET MESSAGE_TEXT = 'Thời gian kết thúc phải lớn hơn thời gian bắt đầu.';
     END IF;
 END$$
 
@@ -269,9 +270,128 @@ FOR EACH ROW
 BEGIN
     IF NEW.EndDate <= NEW.StartDate THEN
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'EndDate must be greater than StartDate.';
+        SET MESSAGE_TEXT = 'Thời gian kết thúc phải lớn hơn thời gian bắt đầu.';
     END IF;
 END$$
+
+CREATE TRIGGER before_insert_discountproduct_product
+BEFORE INSERT ON DiscountProduct_Product
+FOR EACH ROW
+BEGIN
+    DECLARE overlap_count INT;
+
+    SELECT COUNT(*)
+    INTO overlap_count
+    FROM DiscountProduct dp
+    WHERE dp.DiscountProductID = NEW.DiscountProductID
+      AND EXISTS (
+          SELECT 1
+          FROM DiscountProduct_Product dpp
+          JOIN DiscountProduct dp2 ON dp2.DiscountProductID = dpp.DiscountProductID
+          WHERE dpp.ProductID = NEW.ProductID
+            AND ((dp.StartDate BETWEEN dp2.StartDate AND dp2.EndDate)
+              OR (dp.EndDate BETWEEN dp2.StartDate AND dp2.EndDate)
+              OR (dp2.StartDate BETWEEN dp.StartDate AND dp.EndDate)
+              OR (dp2.EndDate BETWEEN dp.StartDate AND dp.EndDate))
+      );
+
+    IF overlap_count > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Thời gian giảm giá trùng lặp cho sản phẩm này.';
+    END IF;
+END$$
+
+CREATE TRIGGER before_update_discountproduct_product
+BEFORE UPDATE ON DiscountProduct_Product
+FOR EACH ROW
+BEGIN
+    DECLARE overlap_count INT;
+
+    SELECT COUNT(*)
+    INTO overlap_count
+    FROM DiscountProduct dp
+    JOIN DiscountProduct_Product dpp ON dp.DiscountProductID = dpp.DiscountProductID
+    WHERE dpp.ProductID = NEW.ProductID
+      AND dp.DiscountProductID != NEW.DiscountProductID
+      AND EXISTS (
+          SELECT 1
+          FROM DiscountProduct dp_new
+          WHERE dp_new.DiscountProductID = NEW.DiscountProductID
+            AND ((dp_new.StartDate BETWEEN dp.StartDate AND dp.EndDate)
+              OR (dp_new.EndDate BETWEEN dp.StartDate AND dp.EndDate)
+              OR (dp.StartDate BETWEEN dp_new.StartDate AND dp_new.EndDate)
+              OR (dp.EndDate BETWEEN dp_new.StartDate AND dp_new.EndDate))
+      );
+
+    IF overlap_count > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Thời gian giảm giá trùng lặp cho sản phẩm này.';
+    END IF;
+END$$
+
+CREATE TRIGGER Update_QuantityInStock
+AFTER INSERT ON stocksale
+FOR EACH ROW
+BEGIN
+    UPDATE Product
+    SET QuantityInStock = QuantityInStock - NEW.Quantity
+    WHERE Product.ProductID = NEW.ProductID;
+END$$
+
+CREATE TRIGGER Before_Insert_StockSale
+BEFORE INSERT ON stocksale
+FOR EACH ROW
+BEGIN
+    DECLARE current_stock INT;
+
+    -- Lấy số lượng tồn kho hiện tại
+    SELECT QuantityInStock INTO current_stock
+    FROM Product
+    WHERE ProductID = NEW.ProductID;
+
+    -- Kiểm tra nếu số lượng bán vượt quá tồn kho
+    IF NEW.Quantity > current_stock THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Error: Quantity exceeds available stock.';
+    END IF;
+END$$
+
+CREATE TRIGGER Before_Update_StockSale
+BEFORE UPDATE ON stocksale
+FOR EACH ROW
+BEGIN
+    DECLARE current_stock INT;
+
+    -- Lấy số lượng tồn kho hiện tại
+    SELECT QuantityInStock INTO current_stock
+    FROM Product
+    WHERE ProductID = NEW.ProductID;
+
+    -- Kiểm tra nếu số lượng bán vượt quá tồn kho
+    IF NEW.Quantity > current_stock THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Error: Quantity exceeds available stock.';
+    END IF;
+END$$
+
+CREATE TRIGGER After_Insert_StockSale
+AFTER INSERT ON stocksale
+FOR EACH ROW
+BEGIN
+    UPDATE Product
+    SET QuantityInStock = QuantityInStock - NEW.Quantity
+    WHERE ProductID = NEW.ProductID;
+END$$
+
+CREATE TRIGGER After_Update_StockSale
+AFTER UPDATE ON stocksale
+FOR EACH ROW
+BEGIN
+    UPDATE Product
+    SET QuantityInStock = QuantityInStock - (NEW.Quantity - OLD.Quantity)
+    WHERE ProductID = NEW.ProductID;
+END$$
+
 
 DELIMITER ;
 
