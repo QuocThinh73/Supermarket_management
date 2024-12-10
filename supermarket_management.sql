@@ -26,6 +26,7 @@ CREATE TABLE Product (
     Price			INT UNSIGNED NOT NULL,
     Unit			NVARCHAR(10) NOT NULL,
     ExpirationDate	DATETIME,
+    QuantityInStock   INT UNSIGNED NOT NULL DEFAULT 0,
     FOREIGN KEY(CategoryID) REFERENCES Category(CategoryID),
     FOREIGN KEY(SupplierID) REFERENCES Supplier(SupplierID)
 );
@@ -271,6 +272,70 @@ BEGIN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'EndDate must be greater than StartDate.';
     END IF;
+END$$
+
+CREATE TRIGGER Update_QuantityInStock
+AFTER INSERT ON stocksale
+FOR EACH ROW
+BEGIN
+    UPDATE Product
+    SET QuantityInStock = QuantityInStock - NEW.Quantity
+    WHERE Product.ProductID = NEW.ProductID;
+END$$
+
+CREATE TRIGGER Before_Insert_StockSale
+BEFORE INSERT ON stocksale
+FOR EACH ROW
+BEGIN
+    DECLARE current_stock INT;
+
+    -- Lấy số lượng tồn kho hiện tại
+    SELECT QuantityInStock INTO current_stock
+    FROM Product
+    WHERE ProductID = NEW.ProductID;
+
+    -- Kiểm tra nếu số lượng bán vượt quá tồn kho
+    IF NEW.Quantity > current_stock THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Error: Quantity exceeds available stock.';
+    END IF;
+END$$
+
+CREATE TRIGGER Before_Update_StockSale
+BEFORE UPDATE ON stocksale
+FOR EACH ROW
+BEGIN
+    DECLARE current_stock INT;
+
+    -- Lấy số lượng tồn kho hiện tại
+    SELECT QuantityInStock INTO current_stock
+    FROM Product
+    WHERE ProductID = NEW.ProductID;
+
+    -- Kiểm tra nếu số lượng bán vượt quá tồn kho
+    IF NEW.Quantity > current_stock THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Error: Quantity exceeds available stock.';
+    END IF;
+END$$
+
+
+CREATE TRIGGER After_Insert_StockSale
+AFTER INSERT ON stocksale
+FOR EACH ROW
+BEGIN
+    UPDATE Product
+    SET QuantityInStock = QuantityInStock - NEW.Quantity
+    WHERE ProductID = NEW.ProductID;
+END$$
+
+CREATE TRIGGER After_Update_StockSale
+AFTER UPDATE ON stocksale
+FOR EACH ROW
+BEGIN
+    UPDATE Product
+    SET QuantityInStock = QuantityInStock - (NEW.Quantity - OLD.Quantity)
+    WHERE ProductID = NEW.ProductID;
 END$$
 
 DELIMITER ;

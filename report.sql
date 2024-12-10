@@ -143,6 +143,29 @@ CALL sp_GetStockReport(NULL, NULL, NULL, NULL, NULL);
 
 DELIMITER $$
 
+CREATE PROCEDURE NotifyLowStockProducts(low_stock_limit INT)
+BEGIN
+    -- Tìm sản phẩm sắp hết hàng
+    SELECT ProductID, ProductName, QuantityInStock
+    FROM Product
+    WHERE QuantityInStock < low_stock_limit;
+
+    -- Xuất thông báo nếu có sản phẩm sắp hết hàng
+    IF (SELECT COUNT(*) 
+        FROM Product 
+        WHERE QuantityInStock < low_stock_limit) > 0 THEN
+        SELECT CONCAT('Warning: Some products have stock below ', low_stock_limit) AS Notification;
+    ELSE
+        SELECT 'All products are sufficiently stocked.' AS Notification;
+    END IF;
+END$$
+
+DELIMITER ;
+
+CALL NotifyLowStockProducts(10);
+
+DELIMITER $$
+
 DROP PROCEDURE IF EXISTS sp_GetCustomerAddress;
 CREATE PROCEDURE sp_GetCustomerAddress(
     IN p_CustomerID INT
