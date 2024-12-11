@@ -220,7 +220,7 @@ CREATE PROCEDURE sp_GetStockReport(
     IN pMonth INT,
     IN pDay INT,
     IN pCategoryFilter VARCHAR(255), -- Lọc theo danh mục sản phẩm (NULL nếu không lọc)
-    IN pProductFilter VARCHAR(255)  -- Lọc theo tên sản phẩm (NULL nếu không lọc)
+    IN pProductFilter VARCHAR(255) -- Lọc theo tên sản phẩm (NULL nếu không lọc)
 )
 BEGIN
     -- Khai báo các biến để lưu trữ giá trị ngày, tháng, năm
@@ -228,9 +228,23 @@ BEGIN
     DECLARE v_Month INT;
     DECLARE v_Day INT;
 
-    -- Kiểm tra và thiết lập giá trị ngày, tháng, năm
-    IF (pYear IS NULL AND pMonth IS NULL AND pDay IS NULL) THEN
-        -- Nếu không có giá trị nào được cung cấp, dùng ngày hiện tại
+    -- Kiểm tra các tham số đầu vào
+    IF (pYear IS NULL AND pMonth IS NULL AND pDay IS NULL AND pCategoryFilter IS NULL AND pProductFilter IS NULL) THEN
+        -- Trường hợp tất cả tham số đều NULL: Trả về tồn kho tại thời điểm hiện tại của tất cả sản phẩm
+        SELECT 
+            p.ProductID, 
+            p.ProductName, 
+            c.CategoryName, 
+            SUM(CASE WHEN s.Type = 'Nhập' THEN s.Quantity ELSE 0 END) - 
+            SUM(CASE WHEN s.Type = 'Xuất' THEN s.Quantity ELSE 0 END) AS StockRemaining
+        FROM StockSale s
+        JOIN Product p ON s.ProductID = p.ProductID
+        JOIN Category c ON p.CategoryID = c.CategoryID
+        GROUP BY p.ProductID, p.ProductName, c.CategoryName
+        HAVING StockRemaining > 0
+        ORDER BY StockRemaining DESC;
+    ELSEIF (pYear IS NULL AND pMonth IS NULL AND pDay IS NULL) THEN
+        -- Trường hợp không có thông tin ngày tháng năm, nhưng có các tiêu chí khác
         SET v_Year = YEAR(CURRENT_DATE);
         SET v_Month = MONTH(CURRENT_DATE);
         SET v_Day = DAY(CURRENT_DATE);
@@ -254,9 +268,9 @@ BEGIN
     FROM StockSale s
     JOIN Product p ON s.ProductID = p.ProductID
     JOIN Category c ON p.CategoryID = c.CategoryID
-    WHERE YEAR(s.DateTime) = v_Year
-      AND MONTH(s.DateTime) = v_Month
-      AND DAY(s.DateTime) = v_Day
+    WHERE (pYear IS NULL OR YEAR(s.DateTime) = v_Year) 
+      AND (pMonth IS NULL OR MONTH(s.DateTime) = v_Month) 
+      AND (pDay IS NULL OR DAY(s.DateTime) = v_Day)
       AND (pCategoryFilter IS NULL OR c.CategoryName = pCategoryFilter)
       AND (pProductFilter IS NULL OR p.ProductName = pProductFilter)
     GROUP BY p.ProductID, p.ProductName, c.CategoryName
@@ -266,9 +280,10 @@ END$$
 
 DELIMITER ;
 
-CALL sp_GetStockReport(2024, 10, 7, 'Mì, miến, cháo, phở', NULL);
-CALL sp_GetStockReport(2024, 10, 7, NULL, 'Thùng 30 gói mì Hảo Hảo tôm chua cay 75g');
-CALL sp_GetStockReport(2024, 10, 7, 'Mì, miến, cháo, phở', 'Thùng 30 gói mì Hảo Hảo tôm chua cay 75g');
+CALL sp_GetStockReport(2024, 10, 7, "Mì. miến, cháo, phở", NULL);
+CALL sp_GetStockReport(2024, 10, 7, NULL, NULL);
+CALL sp_GetStockReport(NULL, NULL, NULL, NULL, 'Thùng 30 gói mì Hảo Hảo tôm chua cay 75g');
+CALL sp_GetStockReport(NULL, NULL, NULL, 'Mì, miến, cháo, phở', NULL);
 CALL sp_GetStockReport(NULL, NULL, NULL, NULL, NULL);
 
 -- Hiển thị sản phẩm sắp hết hàng
