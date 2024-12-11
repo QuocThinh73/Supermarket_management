@@ -141,7 +141,7 @@ CALL sp_GetStockReport(2024, 10, 7, NULL, 'Thùng 30 gói mì Hảo Hảo tôm c
 CALL sp_GetStockReport(2024, 10, 7, 'Mì, miến, cháo, phở', 'Thùng 30 gói mì Hảo Hảo tôm chua cay 75g');
 CALL sp_GetStockReport(NULL, NULL, NULL, NULL, NULL);
 
--- Hiển thị sản phẩm sắp hết hàng
+-- Hiển thị sản phẩm gần hết hàng
 
 DELIMITER $$
 

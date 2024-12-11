@@ -20,15 +20,15 @@ CREATE TABLE Supplier (
 CREATE TABLE Product (
 	ProductID			INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     ProductName			NVARCHAR(70) NOT NULL,
-    CategoryID			INT UNSIGNED NOT NULL,
-    SupplierID			INT UNSIGNED NOT NULL,
+    CategoryID			INT UNSIGNED,
+    SupplierID			INT UNSIGNED,
     CostPrice			INT UNSIGNED NOT NULL,
     Price				INT UNSIGNED NOT NULL,
     Unit				NVARCHAR(10) NOT NULL,
     ExpirationDate		DATETIME,
     QuantityInStock   	INT UNSIGNED NOT NULL DEFAULT 0,
-    FOREIGN KEY(CategoryID) REFERENCES Category(CategoryID),
-    FOREIGN KEY(SupplierID) REFERENCES Supplier(SupplierID)
+    FOREIGN KEY(CategoryID) REFERENCES Category(CategoryID) ON DELETE SET NULL,
+    FOREIGN KEY(SupplierID) REFERENCES Supplier(SupplierID) ON DELETE SET NULL
 );
 
 CREATE TABLE Customer (
@@ -86,7 +86,7 @@ CREATE TABLE DiscountProduct (
     StartDate				DATETIME NOT NULL,
     EndDate					DATETIME NOT NULL,
     DiscountType			ENUM('Phần trăm', 'Số tiền') NOT NULL,
-    DiscountValue			INT UNSIGNED NOT NULL
+    DiscountValue			INT UNSIGNED DEFAULT 0
 );
 
 CREATE TABLE DiscountProduct_Product (
@@ -110,21 +110,21 @@ CREATE TABLE DiscountOrder (
 
 CREATE TABLE `Order` (
 	OrderID				INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    EmployeeID			INT UNSIGNED NOT NULL,
+    EmployeeID			INT UNSIGNED,
     OrderAmount			INT UNSIGNED NOT NULL DEFAULT 0,
     DiscountAmount		INT UNSIGNED NOT NULL DEFAULT 0,
     `DateTime`			DATETIME NOT NULL,
-    FOREIGN KEY(EmployeeID) REFERENCES Employee(EmployeeID)
+    FOREIGN KEY(EmployeeID) REFERENCES Employee(EmployeeID) ON DELETE SET NULL
 );
 
 CREATE TABLE Product_Order (
 	ProductID		INT UNSIGNED NOT NULL,
     OrderID			INT UNSIGNED NOT NULL,
     QuantitySold	INT UNSIGNED NOT NULL,
-    SubAmount       INT UNSIGNED NOT NULL,
+    SubAmount       INT UNSIGNED DEFAULT 0,
     PRIMARY KEY(ProductID, OrderID),
-    FOREIGN KEY(ProductID) REFERENCES Product(ProductID),
-    FOREIGN KEY(OrderID) REFERENCES `Order`(OrderID)
+    FOREIGN KEY(ProductID) REFERENCES Product(ProductID) ON DELETE CASCADE,
+    FOREIGN KEY(OrderID) REFERENCES `Order`(OrderID) ON DELETE CASCADE
 );
 
 CREATE TABLE Payment (
@@ -134,8 +134,8 @@ CREATE TABLE Payment (
     PaymentMethod	ENUM('Tiền mặt', 'Thẻ', 'Chuyển khoản') NOT NULL,
     `DateTime`		DATETIME NOT NULL,
     PaymentAmount	INT UNSIGNED NOT NULL DEFAULT 0,
-    FOREIGN KEY(OrderID) REFERENCES `Order`(OrderID),
-    FOREIGN KEY(CustomerID) REFERENCES Customer(CustomerID)
+    FOREIGN KEY(OrderID) REFERENCES `Order`(OrderID) ON DELETE CASCADE,
+    FOREIGN KEY(CustomerID) REFERENCES Customer(CustomerID) ON DELETE SET NULL
 );
 
 CREATE TABLE Voucher (
@@ -147,8 +147,8 @@ CREATE TABLE Voucher (
     StartDate		DATETIME NOT NULL,
     EndDate			DATETIME NOT NULL,
     `Description`	NVARCHAR(50),
-    FOREIGN KEY(CustomerID) REFERENCES Customer(CustomerID),
-    FOREIGN KEY(OrderID) REFERENCES `Order`(OrderID)
+    FOREIGN KEY(CustomerID) REFERENCES Customer(CustomerID) ON DELETE CASCADE,
+    FOREIGN KEY(OrderID) REFERENCES `Order`(OrderID) ON DELETE CASCADE
 );
 
 CREATE TABLE `Position` (
@@ -163,7 +163,7 @@ CREATE TABLE PositionHistory (
     StartDate		DATETIME NOT NULL,
     EndDate			DATETIME,
     PRIMARY KEY(EmployeeID, PositionID, StartDate),
-    FOREIGN KEY (EmployeeID) REFERENCES Employee(EmployeeID),
+    FOREIGN KEY (EmployeeID) REFERENCES Employee(EmployeeID) ON DELETE CASCADE,
     FOREIGN KEY (PositionID) REFERENCES `Position`(PositionID)
 );
 
@@ -200,7 +200,7 @@ CREATE TRIGGER before_product_insert
 BEFORE INSERT ON Product
 FOR EACH ROW
 BEGIN
-    IF NEW.Price < NEW.CostPrice THEN
+    IF NEW.Price < NEW.Price THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'Giá bán phải lớn hơn hoặc bằng giá vốn.';
     END IF;
@@ -210,7 +210,7 @@ CREATE TRIGGER before_product_update
 BEFORE UPDATE ON Product
 FOR EACH ROW
 BEGIN
-    IF NEW.Price < NEW.CostPrice THEN
+    IF NEW.Price < NEW.Price THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'Giá bán phải lớn hơn hoặc bằng giá vốn.';
     END IF;
@@ -446,10 +446,34 @@ BEFORE INSERT ON Product_Order
 FOR EACH ROW
 BEGIN
     DECLARE product_cost INT;
+    DECLARE order_datetime DATETIME;
+    DECLARE d_value INT;
+    DECLARE d_type ENUM('Phần trăm','Số tiền');
+
+    SELECT `DateTime` INTO order_datetime
+    FROM `Order`
+    WHERE OrderID = NEW.OrderID;
 
     SELECT Price INTO product_cost
     FROM Product
     WHERE ProductID = NEW.ProductID;
+
+    SELECT dp.DiscountValue, dp.DiscountType
+    INTO d_value, d_type
+    FROM DiscountProduct dp
+    JOIN DiscountProduct_Product dpp ON dp.DiscountProductID = dpp.DiscountProductID
+    WHERE dpp.ProductID = NEW.ProductID
+      AND order_datetime BETWEEN dp.StartDate AND dp.EndDate
+    ORDER BY dp.DiscountValue DESC
+    LIMIT 1;
+
+    IF d_value IS NOT NULL THEN
+        IF d_type = 'Phần trăm' THEN
+            SET product_cost = product_cost - FLOOR(product_cost * d_value / 100);
+        ELSE
+            SET product_cost = GREATEST(product_cost - d_value, 0);
+        END IF;
+    END IF;
 
     SET NEW.SubAmount = NEW.QuantitySold * product_cost;
 END$$
@@ -459,10 +483,34 @@ BEFORE UPDATE ON Product_Order
 FOR EACH ROW
 BEGIN
     DECLARE product_cost INT;
+    DECLARE order_datetime DATETIME;
+    DECLARE d_value INT;
+    DECLARE d_type ENUM('Phần trăm','Số tiền');
+
+    SELECT `DateTime` INTO order_datetime
+    FROM `Order`
+    WHERE OrderID = NEW.OrderID;
 
     SELECT Price INTO product_cost
     FROM Product
     WHERE ProductID = NEW.ProductID;
+
+    SELECT dp.DiscountValue, dp.DiscountType
+    INTO d_value, d_type
+    FROM DiscountProduct dp
+    JOIN DiscountProduct_Product dpp ON dp.DiscountProductID = dpp.DiscountProductID
+    WHERE dpp.ProductID = NEW.ProductID
+      AND order_datetime BETWEEN dp.StartDate AND dp.EndDate
+    ORDER BY dp.DiscountValue DESC
+    LIMIT 1;
+
+    IF d_value IS NOT NULL THEN
+        IF d_type = 'Phần trăm' THEN
+            SET product_cost = product_cost - FLOOR(product_cost * d_value / 100);
+        ELSE
+            SET product_cost = GREATEST(product_cost - d_value, 0);
+        END IF;
+    END IF;
 
     SET NEW.SubAmount = NEW.QuantitySold * product_cost;
 END$$
@@ -503,7 +551,6 @@ BEGIN
         SET tmp_discount_amount = 0;
     END IF;
 
-    -- Cập nhật Order
     UPDATE `Order`
     SET OrderAmount = total_amount,
         DiscountAmount = tmp_discount_amount
