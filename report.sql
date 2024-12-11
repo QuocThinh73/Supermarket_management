@@ -1,71 +1,147 @@
 USE Supermarket_Management;
 
+-- DELIMITER $$
+
+-- DROP PROCEDURE IF EXISTS sp_CalculateTotalRevenue;
+-- CREATE PROCEDURE sp_CalculateTotalRevenue(
+--     IN pPeriodType VARCHAR(10), -- 'month', 'quarter', 'year'
+--     IN pYear INT,              -- Năm cần tính
+--     IN pQuarterFilter INT,      -- Lọc theo quý cụ thể (NULL nếu không lọc)
+--     IN pMonthFilter INT,        -- Lọc theo tháng cụ thể (NULL nếu không lọc)
+--     IN pCategoryFilter VARCHAR(255) -- Lọc theo danh mục sản phẩm (NULL nếu không lọc)
+-- )
+-- BEGIN
+--     -- Biến để lưu chuỗi GROUP BY
+--     DECLARE v_GroupByClause VARCHAR(100);
+--     DECLARE v_WhereClause VARCHAR(255);
+
+--     -- Xác định chuỗi GROUP BY dựa trên loại thời kỳ
+--     IF pPeriodType = 'month' THEN
+--         SET v_GroupByClause = "YEAR(s.DateTime), MONTH(s.DateTime)";
+--     ELSEIF pPeriodType = 'quarter' THEN
+--         SET v_GroupByClause = "YEAR(s.DateTime), QUARTER(s.DateTime)";
+--     ELSEIF pPeriodType = 'year' THEN
+--         SET v_GroupByClause = "YEAR(s.DateTime)";
+--     ELSE
+--         SIGNAL SQLSTATE '45000'
+--         SET MESSAGE_TEXT = 'Invalid period type. Must be "month", "quarter", or "year".';
+--     END IF;
+
+--     -- Xây dựng câu điều kiện WHERE
+--     SET v_WhereClause = CONCAT(
+--         "s.Type = 'Xuất' AND YEAR(s.DateTime) = ", pYear,
+--         IF(pQuarterFilter IS NOT NULL, CONCAT(" AND QUARTER(s.DateTime) = ", pQuarterFilter), ""),
+--         IF(pMonthFilter IS NOT NULL, CONCAT(" AND MONTH(s.DateTime) = ", pMonthFilter), ""),
+--         IF(pCategoryFilter IS NOT NULL, CONCAT(" AND c.CategoryName = '", pCategoryFilter, "'"), "")
+--     );
+
+--     -- Tạo truy vấn động
+--     SET @query = CONCAT(
+--         "SELECT ",
+--         "YEAR(s.DateTime) AS Year, ",
+--         CASE 
+--             WHEN pPeriodType = 'month' THEN "MONTH(s.DateTime)" 
+--             WHEN pPeriodType = 'quarter' THEN "QUARTER(s.DateTime)" 
+--             ELSE "NULL" 
+--         END, " AS Period, ",
+--         "c.CategoryName AS Category, ",
+--         "SUM(s.Quantity * p.Price) AS TotalRevenue ",
+--         "FROM StockSale s ",
+--         "JOIN Product p ON s.ProductID = p.ProductID ",
+--         "JOIN Category c ON p.CategoryID = c.CategoryID ",
+--         "WHERE ", v_WhereClause, " ",
+--         "GROUP BY ", v_GroupByClause, ", c.CategoryName ",
+--         "ORDER BY Year, Period, TotalRevenue DESC"
+--     );
+
+--     -- Chuẩn bị và thực thi truy vấn
+--     PREPARE stmt FROM @query;
+--     EXECUTE stmt;
+--     DEALLOCATE PREPARE stmt;
+-- END$$
+
+-- DELIMITER ;
+
 DELIMITER $$
 
-DROP PROCEDURE IF EXISTS sp_CalculateTotalRevenueByPeriod;
-CREATE PROCEDURE sp_CalculateTotalRevenueByPeriod(
-    IN pPeriodType VARCHAR(10), -- 'month', 'quarter', 'year'
-    IN pYear INT,              -- Năm cần tính
-    IN pQuarterFilter INT,      -- Lọc theo quý cụ thể (NULL nếu không lọc)
-    IN pMonthFilter INT,        -- Lọc theo tháng cụ thể (NULL nếu không lọc)
+DROP PROCEDURE IF EXISTS sp_CalculateTotalRevenue;
+CREATE PROCEDURE sp_CalculateTotalRevenue(
+    IN pPeriodType VARCHAR(10), -- 'month', 'quarter', 'year' (hoặc NULL nếu không lọc thời gian)
+    IN pYear INT,              -- Năm cần tính (hoặc NULL nếu không lọc)
+    IN pQuarterFilter INT,     -- Lọc theo quý cụ thể (NULL nếu không lọc)
+    IN pMonthFilter INT,       -- Lọc theo tháng cụ thể (NULL nếu không lọc)
     IN pCategoryFilter VARCHAR(255) -- Lọc theo danh mục sản phẩm (NULL nếu không lọc)
 )
 BEGIN
-    -- Biến để lưu chuỗi GROUP BY
-    DECLARE v_GroupByClause VARCHAR(100);
-    DECLARE v_WhereClause VARCHAR(255);
-
-    -- Xác định chuỗi GROUP BY dựa trên loại thời kỳ
-    IF pPeriodType = 'month' THEN
-        SET v_GroupByClause = "YEAR(s.DateTime), MONTH(s.DateTime)";
+    -- Trường hợp chỉ lọc theo danh mục sản phẩm
+    IF pPeriodType IS NULL AND pYear IS NULL AND pQuarterFilter IS NULL AND pMonthFilter IS NULL THEN
+        SELECT 
+            c.CategoryName AS Category,
+            SUM(s.Quantity * p.Price) AS TotalRevenue
+        FROM StockSale s
+        JOIN Product p ON s.ProductID = p.ProductID
+        JOIN Category c ON p.CategoryID = c.CategoryID
+        WHERE s.Type = 'Xuất'
+          AND (pCategoryFilter IS NULL OR c.CategoryName = pCategoryFilter)
+        GROUP BY c.CategoryName
+        ORDER BY TotalRevenue DESC;
+    -- Lọc theo loại thời kỳ và điều kiện
+    ELSEIF pPeriodType = 'month' THEN
+        SELECT 
+            YEAR(s.DateTime) AS Year, 
+            MONTH(s.DateTime) AS Period,
+            c.CategoryName AS Category,
+            SUM(s.Quantity * p.Price) AS TotalRevenue
+        FROM StockSale s
+        JOIN Product p ON s.ProductID = p.ProductID
+        JOIN Category c ON p.CategoryID = c.CategoryID
+        WHERE s.Type = 'Xuất' 
+          AND YEAR(s.DateTime) = pYear
+          AND (pMonthFilter IS NULL OR MONTH(s.DateTime) = pMonthFilter)
+          AND (pCategoryFilter IS NULL OR c.CategoryName = pCategoryFilter)
+        GROUP BY YEAR(s.DateTime), MONTH(s.DateTime), c.CategoryName
+        ORDER BY Year, Period, TotalRevenue DESC;
     ELSEIF pPeriodType = 'quarter' THEN
-        SET v_GroupByClause = "YEAR(s.DateTime), QUARTER(s.DateTime)";
+        SELECT 
+            YEAR(s.DateTime) AS Year, 
+            QUARTER(s.DateTime) AS Period,
+            c.CategoryName AS Category,
+            SUM(s.Quantity * p.Price) AS TotalRevenue
+        FROM StockSale s
+        JOIN Product p ON s.ProductID = p.ProductID
+        JOIN Category c ON p.CategoryID = c.CategoryID
+        WHERE s.Type = 'Xuất' 
+          AND YEAR(s.DateTime) = pYear
+          AND (pQuarterFilter IS NULL OR QUARTER(s.DateTime) = pQuarterFilter)
+          AND (pCategoryFilter IS NULL OR c.CategoryName = pCategoryFilter)
+        GROUP BY YEAR(s.DateTime), QUARTER(s.DateTime), c.CategoryName
+        ORDER BY Year, Period, TotalRevenue DESC;
     ELSEIF pPeriodType = 'year' THEN
-        SET v_GroupByClause = "YEAR(s.DateTime)";
+        SELECT 
+            YEAR(s.DateTime) AS Year, 
+            NULL AS Period,
+            c.CategoryName AS Category,
+            SUM(s.Quantity * p.Price) AS TotalRevenue
+        FROM StockSale s
+        JOIN Product p ON s.ProductID = p.ProductID
+        JOIN Category c ON p.CategoryID = c.CategoryID
+        WHERE s.Type = 'Xuất' 
+          AND YEAR(s.DateTime) = pYear
+          AND (pCategoryFilter IS NULL OR c.CategoryName = pCategoryFilter)
+        GROUP BY YEAR(s.DateTime), c.CategoryName
+        ORDER BY Year, TotalRevenue DESC;
     ELSE
         SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Invalid period type. Must be "month", "quarter", or "year".';
+        SET MESSAGE_TEXT = 'Invalid period type. Must be "month", "quarter", "year", or NULL for category-only filter.';
     END IF;
-
-    -- Xây dựng câu điều kiện WHERE
-    SET v_WhereClause = CONCAT(
-        "s.Type = 'Xuất' AND YEAR(s.DateTime) = ", pYear,
-        IF(pQuarterFilter IS NOT NULL, CONCAT(" AND QUARTER(s.DateTime) = ", pQuarterFilter), ""),
-        IF(pMonthFilter IS NOT NULL, CONCAT(" AND MONTH(s.DateTime) = ", pMonthFilter), ""),
-        IF(pCategoryFilter IS NOT NULL, CONCAT(" AND c.CategoryName = '", pCategoryFilter, "'"), "")
-    );
-
-    -- Tạo truy vấn động
-    SET @query = CONCAT(
-        "SELECT ",
-        "YEAR(s.DateTime) AS Year, ",
-        CASE 
-            WHEN pPeriodType = 'month' THEN "MONTH(s.DateTime)" 
-            WHEN pPeriodType = 'quarter' THEN "QUARTER(s.DateTime)" 
-            ELSE "NULL" 
-        END, " AS Period, ",
-        "c.CategoryName AS Category, ",
-        "SUM(s.Quantity * p.Price) AS TotalRevenue ",
-        "FROM StockSale s ",
-        "JOIN Product p ON s.ProductID = p.ProductID ",
-        "JOIN Category c ON p.CategoryID = c.CategoryID ",
-        "WHERE ", v_WhereClause, " ",
-        "GROUP BY ", v_GroupByClause, ", c.CategoryName ",
-        "ORDER BY Year, Period, TotalRevenue DESC"
-    );
-
-    -- Chuẩn bị và thực thi truy vấn
-    PREPARE stmt FROM @query;
-    EXECUTE stmt;
-    DEALLOCATE PREPARE stmt;
 END$$
 
 DELIMITER ;
 
-CALL sp_CalculateTotalRevenueByPeriod('year', NULL, NULL, NULL, 'Bánh kẹo các loại');
-CALL sp_CalculateTotalRevenueByPeriod('quarter', 2024, 2, NULL, NULL);
-CALL sp_CalculateTotalRevenueByPeriod('month', 2024, NULL, 10, 'Mì, miến, cháo, phở');
-CALL sp_CalculateTotalRevenueByPeriod('year', 2024, NULL, NULL, NULL);
+CALL sp_CalculateTotalRevenue('year', NULL, NULL, NULL, 'Bánh kẹo các loại');
+CALL sp_CalculateTotalRevenue('quarter', 2024, 2, NULL, NULL);
+CALL sp_CalculateTotalRevenue('month', 2024, NULL, 10, 'Mì, miến, cháo, phở');
+CALL sp_CalculateTotalRevenue('year', 2024, NULL, NULL, NULL);
 
 DELIMITER $$
 
